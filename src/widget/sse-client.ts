@@ -1,11 +1,17 @@
 // SSE Client for MVP-003B: Frontend SSE Integratie & Backend Connectie
 
 export interface SSEEvent {
-  type: 'typing' | 'content' | 'done' | 'error';
+  type: 'typing' | 'content' | 'done' | 'error' | 'persona';
   token?: string;
   message?: string;
   confidence?: number;
   latency?: number;
+  persona?: string;
+  tone?: string;
+  templateVersion?: string;
+  promptTemplate?: string;
+  safetyFilter?: boolean;
+  redirectTo?: string;
 }
 
 export interface SSEClientConfig {

@@ -3,13 +3,16 @@ import { ProviderFactory } from '../providers/provider-factory.js';
 import { ConfigService } from '../config-service.js';
 import { RateLimiter } from '../rate-limiter.js';
 import { ErrorHandler } from '../utils/error-handler.js';
+import { PersonaService } from '../services/persona-service.js';
 
 export class AIQueryHandler {
   private configService: ConfigService;
   private rateLimiters: Map<string, RateLimiter> = new Map();
+  private personaService: PersonaService;
 
   constructor() {
     this.configService = new ConfigService();
+    this.personaService = PersonaService.getInstance();
   }
 
   async handleRequest(request: Request): Promise<Response> {
@@ -45,6 +48,13 @@ export class AIQueryHandler {
       // Sanitize input (basic XSS prevention)
       const sanitizedContent = this.sanitizeInput(chatRequest.content);
 
+      // Generate persona response
+      const personaResponse = await this.personaService.generatePersonaResponse(
+        tenantId,
+        sanitizedContent,
+        []
+      );
+
       // Create AI provider
       const provider = ProviderFactory.createProvider(config);
 
@@ -52,12 +62,53 @@ export class AIQueryHandler {
       const stream = new ReadableStream({
         async start(controller) {
           try {
-            for await (const response of provider.streamResponse({
-              ...chatRequest,
-              content: sanitizedContent
-            })) {
-              const sseData = `data: ${JSON.stringify(response)}\n\n`;
+            // Send persona metadata first
+            const personaMetadata = {
+              token: '',
+              type: 'persona',
+              persona: personaResponse.persona,
+              tone: personaResponse.tone,
+              templateVersion: personaResponse.templateVersion,
+              promptTemplate: personaResponse.promptTemplate,
+              safetyFilter: personaResponse.safetyFilter,
+              redirectTo: personaResponse.redirectTo
+            };
+            const personaData = `data: ${JSON.stringify(personaMetadata)}\n\n`;
+            controller.enqueue(new TextEncoder().encode(personaData));
+
+            // If safety filter triggered, send refusal response
+            if (personaResponse.safetyFilter) {
+              const refusalResponse: ChatResponse = {
+                token: personaResponse.response,
+                type: 'content',
+                confidence: 0.9
+              };
+              const sseData = `data: ${JSON.stringify(refusalResponse)}\n\n`;
               controller.enqueue(new TextEncoder().encode(sseData));
+              
+              const doneResponse: ChatResponse = {
+                token: '',
+                type: 'done',
+                confidence: 0.9
+              };
+              const doneData = `data: ${JSON.stringify(doneResponse)}\n\n`;
+              controller.enqueue(new TextEncoder().encode(doneData));
+            } else {
+              // Use AI provider for normal responses with persona context
+              const enhancedRequest = {
+                ...chatRequest,
+                content: sanitizedContent,
+                personaContext: {
+                  persona: personaResponse.persona,
+                  tone: personaResponse.tone,
+                  templateVersion: personaResponse.templateVersion
+                }
+              };
+
+              for await (const response of provider.streamResponse(enhancedRequest)) {
+                const sseData = `data: ${JSON.stringify(response)}\n\n`;
+                controller.enqueue(new TextEncoder().encode(sseData));
+              }
             }
           } catch (error) {
             const errorResponse: ChatResponse = {

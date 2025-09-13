@@ -1,16 +1,19 @@
 import { AIQueryHandler } from './api/ai-query.js';
 import { ConfigHandler } from './api/config.js';
 import { HealthHandler } from './api/health.js';
+import { PersonaConfigHandler } from './api/persona-config.js';
 
 export class ChatboxServer {
   private aiQueryHandler: AIQueryHandler;
   private configHandler: ConfigHandler;
   private healthHandler: HealthHandler;
+  private personaConfigHandler: PersonaConfigHandler;
 
   constructor() {
     this.aiQueryHandler = new AIQueryHandler();
     this.configHandler = new ConfigHandler();
     this.healthHandler = new HealthHandler();
+    this.personaConfigHandler = new PersonaConfigHandler();
   }
 
   async handleRequest(request: Request): Promise<Response> {
@@ -38,6 +41,10 @@ export class ChatboxServer {
 
       if (path.startsWith('/tenant/') && path.endsWith('/config')) {
         return await this.configHandler.handleRequest(request);
+      }
+
+      if (path.startsWith('/tenant/') && path.includes('/persona/')) {
+        return await this.personaConfigHandler.handleRequest(request);
       }
 
       if (path === '/ai/query') {

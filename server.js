@@ -2,6 +2,58 @@
 const http = require('http');
 const url = require('url');
 
+// MVP-006: Persona configurations
+const personaConfigs = {
+  'demo-tenant': {
+    id: 'techcorp',
+    name: 'TechCorp Solutions AI Assistant',
+    tone: 'professioneel-technisch',
+    personality: [
+      'Professioneel en technisch onderlegd',
+      'Focus op web development en software oplossingen',
+      'Direct en efficiënt in communicatie',
+      'Expertise in moderne technologieën'
+    ],
+    safetyPolicies: [
+      'Geen illegale activiteiten',
+      'Geen hacking of malware',
+      'Geen spam of phishing',
+      'Geen persoonlijke informatie delen'
+    ],
+    promptTemplate: 'techcorp-professional-v1.2',
+    templateVersion: 'v1.2',
+    welcomeMessage: 'Hallo! Ik ben de AI-assistent van TechCorp Solutions. Hoe kan ik je helpen met onze web development diensten?',
+    refusalMessage: 'Ik kan je niet helpen met deze vraag. Bij TechCorp Solutions helpen we graag met legitieme web development projecten. Wil je meer weten over onze diensten?'
+  },
+  'test-tenant': {
+    id: 'retailmax',
+    name: 'RetailMax Customer Service AI',
+    tone: 'vriendelijk-klantgericht',
+    personality: [
+      'Vriendelijk en behulpzaam',
+      'Focus op klanttevredenheid en service',
+      'Geduldig en ondersteunend',
+      'Expertise in elektronica en retail'
+    ],
+    safetyPolicies: [
+      'Geen illegale activiteiten',
+      'Geen hacking of malware',
+      'Geen spam of phishing',
+      'Geen persoonlijke informatie delen'
+    ],
+    promptTemplate: 'retailmax-friendly-v1.1',
+    templateVersion: 'v1.1',
+    welcomeMessage: 'Hallo! Welkom bij RetailMax. Ik help je graag met vragen over onze producten en services.',
+    refusalMessage: 'Ik kan je niet helpen met deze vraag. Bij RetailMax staan we voor kwaliteit en service. Hoe kan ik je anders helpen?'
+  }
+};
+
+// Safety filter patterns
+const dangerousPatterns = [
+  /hack/i, /virus/i, /malware/i, /phishing/i, /spam/i,
+  /illegale/i, /crimineel/i, /stelen/i, /fraude/i, /bedrog/i
+];
+
 // Mock data for testing
 const mockResponses = {
   '/api/health': {
@@ -9,7 +61,8 @@ const mockResponses = {
     timestamp: new Date().toISOString(),
     services: {
       ai: 'operational',
-      database: 'operational'
+      database: 'operational',
+      persona: 'operational'
     }
   },
   '/api/tenant/demo-tenant/config': {
@@ -368,22 +421,68 @@ const server = http.createServer((req, res) => {
         console.log('Full message:', fullMessage);
         console.log('Extracted user message:', userMessage);
         
-        // Check if message contains knowledge base context
-        let responseText = '';
-        const messageLower = userMessage.toLowerCase();
+        // MVP-006: Get persona config
+        const personaConfig = personaConfigs[tenantId] || personaConfigs['demo-tenant'];
         
-        if (messageLower.includes('web development') || messageLower.includes('services') || 
-            messageLower.includes('diensten') || messageLower.includes('wat zijn jullie')) {
-          responseText = generateKnowledgeBasedResponse(userMessage, tenantId);
-        } else if (messageLower.includes('prijzen') || messageLower.includes('packages') || 
-                   messageLower.includes('kosten') || messageLower.includes('tarieven') ||
-                   messageLower.includes('prijs') || messageLower.includes('offerte')) {
-          responseText = generatePricingResponse(tenantId);
-        } else if (messageLower.includes('ondersteuning') || messageLower.includes('support') ||
-                   messageLower.includes('help') || messageLower.includes('hulp')) {
-          responseText = generateSupportResponse(tenantId);
+        // MVP-006: Safety filter check
+        let safetyFiltered = false;
+        let redirectTo = null;
+        for (const pattern of dangerousPatterns) {
+          if (pattern.test(userMessage)) {
+            safetyFiltered = true;
+            if (/hack|virus|malware/i.test(userMessage)) {
+              redirectTo = 'legitimate-services';
+            } else if (/spam|phishing/i.test(userMessage)) {
+              redirectTo = 'marketing-services';
+            } else if (/illegale|crimineel/i.test(userMessage)) {
+              redirectTo = 'legal-services';
+            }
+            break;
+          }
+        }
+        
+        // Send persona metadata first
+        res.write(`data: ${JSON.stringify({
+          type: 'persona',
+          persona: personaConfig.id,
+          tone: personaConfig.tone,
+          templateVersion: personaConfig.templateVersion,
+          promptTemplate: personaConfig.promptTemplate,
+          safetyFilter: safetyFiltered,
+          redirectTo: redirectTo
+        })}\n\n`);
+        
+        let responseText = '';
+        
+        if (safetyFiltered) {
+          // Send safety refusal response
+          responseText = personaConfig.refusalMessage;
         } else {
-          responseText = 'Ik ben een AI-assistent en ik kan je helpen!';
+          // Generate contextual response based on persona
+          const messageLower = userMessage.toLowerCase();
+          
+          if (messageLower.includes('hallo') || messageLower.includes('hi') || messageLower.includes('hey')) {
+            responseText = personaConfig.welcomeMessage;
+          } else if (messageLower.includes('web development') || messageLower.includes('services') || 
+                     messageLower.includes('diensten') || messageLower.includes('wat zijn jullie')) {
+            responseText = generateKnowledgeBasedResponse(userMessage, tenantId);
+          } else if (messageLower.includes('prijzen') || messageLower.includes('packages') || 
+                     messageLower.includes('kosten') || messageLower.includes('tarieven') ||
+                     messageLower.includes('prijs') || messageLower.includes('offerte')) {
+            responseText = generatePricingResponse(tenantId);
+          } else if (messageLower.includes('ondersteuning') || messageLower.includes('support') ||
+                     messageLower.includes('help') || messageLower.includes('hulp')) {
+            responseText = generateSupportResponse(tenantId);
+          } else {
+            // Default response based on persona
+            if (personaConfig.id === 'techcorp') {
+              responseText = `TechCorp Solutions: ${personaConfig.personality[0]}. Hoe kan ik je helpen met web development of software oplossingen?`;
+            } else if (personaConfig.id === 'retailmax') {
+              responseText = `RetailMax: ${personaConfig.personality[0]}. Wat kan ik voor je betekenen op het gebied van elektronica en consumentengoederen?`;
+            } else {
+              responseText = 'Ik ben een AI-assistent en ik kan je helpen!';
+            }
+          }
         }
         
         // Stream the response

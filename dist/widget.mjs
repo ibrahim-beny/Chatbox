@@ -670,6 +670,9 @@ const _ChatboxWidget = class _ChatboxWidget {
     const messagesContainer = this.drawer?.querySelector(".chatbox-messages");
     if (!messagesContainer) return;
     switch (event.type) {
+      case "persona":
+        this.handlePersonaEvent(event);
+        break;
       case "typing":
         if (this.typingIndicator) {
           this.typingIndicator.show(event.message || "Assistant is typing...");
@@ -694,6 +697,23 @@ const _ChatboxWidget = class _ChatboxWidget {
       case "error":
         this.handleSSEError(new Error(event.message || "Unknown error"));
         break;
+    }
+  }
+  /**
+   * Handle persona events - MVP-006
+   */
+  handlePersonaEvent(event) {
+    if (event.persona) {
+      console.log(`Persona: ${event.persona} (${event.tone})`);
+      if (event.templateVersion) {
+        console.log(`Template version: ${event.templateVersion}`);
+      }
+      if (event.safetyFilter) {
+        console.log("Safety filter activated");
+        if (event.redirectTo) {
+          console.log(`Redirect to: ${event.redirectTo}`);
+        }
+      }
     }
   }
   /**

@@ -507,6 +507,11 @@ export class ChatboxWidget {
     if (!messagesContainer) return;
 
     switch (event.type) {
+      case 'persona':
+        // Handle persona metadata - MVP-006
+        this.handlePersonaEvent(event);
+        break;
+
       case 'typing':
         if (this.typingIndicator) {
           this.typingIndicator.show(event.message || 'Assistant is typing...');
@@ -534,6 +539,29 @@ export class ChatboxWidget {
       case 'error':
         this.handleSSEError(new Error(event.message || 'Unknown error'));
         break;
+    }
+  }
+
+  /**
+   * Handle persona events - MVP-006
+   */
+  private handlePersonaEvent(event: any): void {
+    // Store persona information for potential use
+    if (event.persona) {
+      console.log(`Persona: ${event.persona} (${event.tone})`);
+      
+      // Update welcome message based on persona if needed
+      if (event.templateVersion) {
+        console.log(`Template version: ${event.templateVersion}`);
+      }
+      
+      // Handle safety filter
+      if (event.safetyFilter) {
+        console.log('Safety filter activated');
+        if (event.redirectTo) {
+          console.log(`Redirect to: ${event.redirectTo}`);
+        }
+      }
     }
   }
 
