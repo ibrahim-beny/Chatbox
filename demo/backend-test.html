@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbox Backend Test - MVP-003A</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .demo-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .demo-section h2 {
+            margin-top: 0;
+            color: #FFD700;
+            font-size: 1.5em;
+        }
+        
+        .button {
+            background: #FFD700;
+            color: #333;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px 5px;
+        }
+        
+        .button:hover {
+            background: #FFED4E;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+        }
+        
+        .button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid rgba(76, 175, 80, 0.5);
+            color: #4CAF50;
+        }
+        
+        .status.error {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid rgba(244, 67, 54, 0.5);
+            color: #F44336;
+        }
+        
+        .status.info {
+            background: rgba(33, 150, 243, 0.2);
+            border: 1px solid rgba(33, 150, 243, 0.5);
+            color: #2196F3;
+        }
+        
+        .code-block {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+            border-left: 4px solid #FFD700;
+        }
+        
+        .sse-output {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .input-group {
+            margin: 15px 0;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+        }
+        
+        .input-group input::placeholder, .input-group textarea::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Chatbox Backend Test - MVP-003A</h1>
+        
+        <div class="demo-section">
+            <h2>📋 Overzicht</h2>
+            <p>
+                Deze demo test de AI Orchestrator & SSE Backend implementatie van MVP-003A.
+                De backend ondersteunt zowel OpenAI als Mock providers voor AI responses.
+            </p>
+            
+            <div class="code-block">
+API Endpoints:
+- POST /api/ai/query (SSE streaming)
+- GET /api/tenant/{tenantId}/config
+- GET /api/health
+
+Features:
+- Provider pattern (OpenAI + Mock)
+- Rate limiting (30 req/min per tenant)
+- Multi-tenant isolation
+- Input sanitization
+- Error handling
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🧪 Test Backend Endpoints</h2>
+            
+            <div class="input-group">
+                <label for="baseUrl">Base URL:</label>
+                <input type="text" id="baseUrl" value="http://localhost:3000" placeholder="Backend base URL">
+            </div>
+            
+            <div class="input-group">
+                <label for="tenantId">Tenant ID:</label>
+                <input type="text" id="tenantId" value="demo-tenant" placeholder="Tenant identifier">
+            </div>
+            
+            <div class="input-group">
+                <label for="message">Test Message:</label>
+                <textarea id="message" rows="3" placeholder="Type je test bericht...">Hallo, hoe gaat het met de backend?</textarea>
+            </div>
+            
+            <button class="button" onclick="testHealth()">Test Health</button>
+            <button class="button" onclick="testConfig()">Test Config</button>
+            <button class="button" onclick="testAIQuery()">Test AI Query (SSE)</button>
+            <button class="button" onclick="testRateLimit()">Test Rate Limit</button>
+            
+            <div id="status" class="status info" style="display: none;"></div>
+            
+            <div id="sseOutput" class="sse-output" style="display: none;">
+                <strong>SSE Stream Output:</strong><br>
+                <div id="sseContent"></div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>📊 Performance Metrics</h2>
+            <div id="metrics" class="code-block">
+                <strong>Metrics:</strong><br>
+                <div id="metricsContent">Klik op "Test AI Query" om metrics te zien</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+            
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 5000);
+        }
+        
+        function getBaseUrl() {
+            return document.getElementById('baseUrl').value;
+        }
+        
+        function getTenantId() {
+            return document.getElementById('tenantId').value;
+        }
+        
+        function getMessage() {
+            return document.getElementById('message').value;
+        }
+        
+        async function testHealth() {
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showStatus('✅ Health check successful!', 'success');
+                    document.getElementById('metricsContent').innerHTML = 
+                        `<strong>Health Status:</strong><br>
+                        Status: ${data.status}<br>
+                        Version: ${data.version}<br>
+                        Mock Mode: ${data.environment.mockMode}<br>
+                        Has OpenAI Key: ${data.environment.hasOpenAIKey}`;
+                } else {
+                    showStatus(`❌ Health check failed: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Health check error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testConfig() {
+            try {
+                const tenantId = getTenantId();
+                const response = await fetch(`${getBaseUrl()}/api/tenant/${tenantId}/config`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showStatus('✅ Config loaded successfully!', 'success');
+                    document.getElementById('metricsContent').innerHTML = 
+                        `<strong>Tenant Config:</strong><br>
+                        Tenant ID: ${data.tenantId}<br>
+                        AI Provider: ${data.aiProvider}<br>
+                        Rate Limit: ${data.rateLimit.requestsPerMinute} req/min<br>
+                        Burst Limit: ${data.rateLimit.burstLimit}<br>
+                        Primary Color: ${data.branding?.primaryColor || 'N/A'}`;
+                } else {
+                    showStatus(`❌ Config load failed: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Config load error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testAIQuery() {
+            try {
+                const startTime = Date.now();
+                const tenantId = getTenantId();
+                const message = getMessage();
+                
+                const response = await fetch(`${getBaseUrl()}/api/ai/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Tenant-ID': tenantId
+                    },
+                    body: JSON.stringify({
+                        tenantId: tenantId,
+                        conversationId: `c-${Date.now()}`,
+                        content: message
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    showStatus(`❌ AI Query failed: ${errorData.error}`, 'error');
+                    return;
+                }
+                
+                showStatus('✅ AI Query started, streaming response...', 'info');
+                
+                const sseOutput = document.getElementById('sseOutput');
+                const sseContent = document.getElementById('sseContent');
+                sseOutput.style.display = 'block';
+                sseContent.innerHTML = '';
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullResponse = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    sseContent.innerHTML += chunk.replace(/\n/g, '<br>');
+                    sseContent.scrollTop = sseContent.scrollHeight;
+                    
+                    // Parse SSE data
+                    const lines = chunk.split('\n');
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                if (data.type === 'content') {
+                                    fullResponse = data.token;
+                                } else if (data.type === 'done') {
+                                    const endTime = Date.now();
+                                    const responseTime = endTime - startTime;
+                                    
+                                    document.getElementById('metricsContent').innerHTML = 
+                                        `<strong>Performance Metrics:</strong><br>
+                                        Response Time: ${responseTime}ms<br>
+                                        Status: ${responseTime <= 1200 ? '✅ PASS' : '❌ FAIL'} (≤1200ms)<br>
+                                        Full Response: "${fullResponse}"<br>
+                                        Confidence: ${data.confidence || 'N/A'}`;
+                                    
+                                    showStatus('✅ AI Query completed successfully!', 'success');
+                                }
+                            } catch (e) {
+                                // Skip invalid JSON
+                            }
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                showStatus(`❌ AI Query error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testRateLimit() {
+            try {
+                const tenantId = getTenantId();
+                const requests = [];
+                
+                showStatus('⏳ Testing rate limit (making 35 requests)...', 'info');
+                
+                for (let i = 0; i < 35; i++) {
+                    requests.push(
+                        fetch(`${getBaseUrl()}/api/ai/query`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Tenant-ID': tenantId
+                            },
+                            body: JSON.stringify({
+                                tenantId: tenantId,
+                                conversationId: `c-${i}`,
+                                content: `Rate limit test ${i}`
+                            })
+                        })
+                    );
+                }
+                
+                const responses = await Promise.all(requests);
+                const statusCodes = responses.map(r => r.status);
+                const rateLimited = statusCodes.filter(s => s === 429).length;
+                const successful = statusCodes.filter(s => s === 200).length;
+                
+                document.getElementById('metricsContent').innerHTML = 
+                    `<strong>Rate Limit Test Results:</strong><br>
+                    Total Requests: 35<br>
+                    Successful (200): ${successful}<br>
+                    Rate Limited (429): ${rateLimited}<br>
+                    Status: ${rateLimited > 0 ? '✅ PASS' : '❌ FAIL'} (Should have rate limiting)`;
+                
+                if (rateLimited > 0) {
+                    showStatus('✅ Rate limiting working correctly!', 'success');
+                } else {
+                    showStatus('❌ Rate limiting not working', 'error');
+                }
+                
+            } catch (error) {
+                showStatus(`❌ Rate limit test error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Auto-test health on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testHealth();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbox Widget Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Chatbox Widget Test</h1>
+        
+        <p>Deze pagina test de Chatbox Widget implementatie.</p>
+        
+        <div>
+            <button class="test-button" onclick="testWidget()">Test Widget</button>
+            <button class="test-button" onclick="testCustomWidget()">Test Custom Widget</button>
+            <button class="test-button" onclick="checkScript()">Check Script</button>
+        </div>
+        
+        <div id="status"></div>
+        
+        <div id="console-output" style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 20px; font-family: monospace; font-size: 12px;">
+            <strong>Console Output:</strong><br>
+            <div id="console-content"></div>
+        </div>
+    </div>
+
+    <!-- Chatbox Widget Script -->
+    <script src="dist/widget.iife.js"></script>
+    
+    <script>
+        // Console logging interceptor
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        
+        function addToConsole(message, type = 'log') {
+            const consoleContent = document.getElementById('console-content');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'red' : type === 'warn' ? 'orange' : 'black';
+            consoleContent.innerHTML += `<div style="color: ${color};">[${timestamp}] ${message}</div>`;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '), 'log');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToConsole(args.join(' '), 'warn');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+        
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        function checkScript() {
+            if (typeof window.Chatbox === 'undefined') {
+                showStatus('❌ Chatbox script niet geladen', 'error');
+            } else {
+                showStatus('✅ Chatbox script succesvol geladen', 'success');
+                console.log('Chatbox object:', window.Chatbox);
+            }
+        }
+        
+        function testWidget() {
+            try {
+                if (typeof window.Chatbox === 'undefined') {
+                    showStatus('❌ Chatbox script niet geladen', 'error');
+                    return;
+                }
+                
+                console.log('Testing basic widget initialization...');
+                console.log('Current domain:', window.location.hostname);
+                console.log('Current protocol:', window.location.protocol);
+                
+                const result = window.Chatbox.init({
+                    tenantId: 'test-tenant'
+                });
+                
+                console.log('Init result:', result);
+                
+                if (result === true) {
+                    showStatus('✅ Widget succesvol geïnitialiseerd!', 'success');
+                    console.log('Widget initialization successful');
+                } else {
+                    showStatus('❌ Widget initialisatie mislukt', 'error');
+                    console.error('Widget initialization failed');
+                }
+            } catch (error) {
+                showStatus(`❌ Fout: ${error.message}`, 'error');
+                console.error('Widget test error:', error);
+            }
+        }
+        
+        function testCustomWidget() {
+            try {
+                if (typeof window.Chatbox === 'undefined') {
+                    showStatus('❌ Chatbox script niet geladen', 'error');
+                    return;
+                }
+                
+                console.log('Testing custom widget initialization...');
+                console.log('Current domain:', window.location.hostname);
+                console.log('Current protocol:', window.location.protocol);
+                
+                const result = window.Chatbox.init({
+                    tenantId: 'custom-tenant',
+                    primaryColor: '#FF6B6B',
+                    welcomeMessage: 'Hallo! Ik ben je AI-assistent. Hoe kan ik je helpen?'
+                });
+                
+                console.log('Custom init result:', result);
+                
+                if (result === true) {
+                    showStatus('✅ Custom widget succesvol geïnitialiseerd! (Rode kleur + custom bericht)', 'success');
+                    console.log('Custom widget initialization successful');
+                    
+                    // Show the difference
+                    setTimeout(() => {
+                        const fab = document.querySelector('.chatbox-fab');
+                        const welcome = document.querySelector('.chatbox-welcome');
+                        if (fab) {
+                            console.log('FAB background color:', getComputedStyle(fab).backgroundColor);
+                        }
+                        if (welcome) {
+                            console.log('Welcome message:', welcome.textContent);
+                        }
+                    }, 100);
+                } else {
+                    showStatus('❌ Custom widget initialisatie mislukt', 'error');
+                    console.error('Custom widget initialization failed');
+                }
+            } catch (error) {
+                showStatus(`❌ Fout: ${error.message}`, 'error');
+                console.error('Custom widget test error:', error);
+            }
+        }
+        
+        // Auto-check script on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                checkScript();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

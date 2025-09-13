@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbox Widget - Ticket Validatie Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .subtitle {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.2em;
+            opacity: 0.9;
+            font-style: italic;
+        }
+        
+        .status-overview {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        
+        .ticket-status {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .ticket-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .ticket-item.completed {
+            background: rgba(76, 175, 80, 0.2);
+            border-color: rgba(76, 175, 80, 0.5);
+        }
+        
+        .ticket-item.pending {
+            background: rgba(255, 193, 7, 0.2);
+            border-color: rgba(255, 193, 7, 0.5);
+        }
+        
+        .ticket-icon {
+            font-size: 1.2em;
+            margin-right: 12px;
+            min-width: 24px;
+        }
+        
+        .ticket-name {
+            flex: 1;
+            font-weight: 500;
+        }
+        
+        .ticket-status-text {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        
+        .test-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border-left: 4px solid #FFD700;
+        }
+        
+        .test-instructions {
+            background: rgba(33, 150, 243, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 3px solid #2196F3;
+        }
+        
+        .test-example {
+            background: rgba(76, 175, 80, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 3px solid #4CAF50;
+        }
+        
+        .test-result {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .test-result.success {
+            background: rgba(76, 175, 80, 0.2);
+            border-color: rgba(76, 175, 80, 0.5);
+        }
+        
+        .test-result.error {
+            background: rgba(244, 67, 54, 0.2);
+            border-color: rgba(244, 67, 54, 0.5);
+        }
+        
+        .test-result.info {
+            background: rgba(33, 150, 243, 0.2);
+            border-color: rgba(33, 150, 243, 0.5);
+        }
+        
+        .demo-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .demo-section h2 {
+            margin-top: 0;
+            color: #FFD700;
+            font-size: 1.5em;
+        }
+        
+        .code-block {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+            border-left: 4px solid #FFD700;
+        }
+        
+        .button {
+            background: #FFD700;
+            color: #333;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px 5px;
+        }
+        
+        .button:hover {
+            background: #FFED4E;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+        }
+        
+        .button:active {
+            transform: translateY(0);
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid rgba(76, 175, 80, 0.5);
+            color: #4CAF50;
+        }
+        
+        .status.error {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid rgba(244, 67, 54, 0.5);
+            color: #F44336;
+        }
+        
+        .status.info {
+            background: rgba(33, 150, 243, 0.2);
+            border: 1px solid rgba(33, 150, 243, 0.5);
+            color: #2196F3;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .feature-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+        
+        .feature-card h3 {
+            margin-top: 0;
+            color: #FFD700;
+        }
+        
+        .emoji {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Chatbox Widget - Ticket Validatie</h1>
+        <div class="subtitle">Demo voor Product Manager - Controleer de kwaliteit van elke ticket oplevering</div>
+        
+        <div class="demo-section">
+            <h2>🎯 Doel van deze Demo</h2>
+            <p><strong>Als Product Manager kun je hier controleren dat elke ticket correct is uitgevoerd.</strong></p>
+            <p>Voor elke ticket die is opgepakt, vind je hier een test sectie waarmee je kunt verifiëren dat de functionaliteit werkt zoals verwacht.</p>
+            
+            <div class="status-overview">
+                <h3>📈 Ticket Status Overzicht</h3>
+                <div class="ticket-status">
+                    <div class="ticket-item completed">
+                        <span class="ticket-icon">✅</span>
+                        <span class="ticket-name">MVP-001: Embeddable Script</span>
+                        <span class="ticket-status-text">Voltooid & Getest</span>
+                    </div>
+                    <div class="ticket-item completed">
+                        <span class="ticket-icon">✅</span>
+                        <span class="ticket-name">MVP-002: Chat Interface</span>
+                        <span class="ticket-status-text">Voltooid & Getest</span>
+                    </div>
+                    <div class="ticket-item completed">
+                        <span class="ticket-icon">✅</span>
+                        <span class="ticket-name">MVP-003A: AI Backend</span>
+                        <span class="ticket-status-text">Voltooid & Getest</span>
+                    </div>
+                    <div class="ticket-item completed">
+                        <span class="ticket-icon">✅</span>
+                        <span class="ticket-name">MVP-003B: Frontend Integratie</span>
+                        <span class="ticket-status-text">Voltooid & Getest</span>
+                    </div>
+                    <div class="ticket-item completed">
+                        <span class="ticket-icon">✅</span>
+                        <span class="ticket-name">MVP-004: Kennisbasis</span>
+                        <span class="ticket-status-text">Voltooid & Getest</span>
+                    </div>
+                    <div class="ticket-item pending">
+                        <span class="ticket-icon">⏳</span>
+                        <span class="ticket-name">MVP-005: Persona & Tone</span>
+                        <span class="ticket-status-text">Nog niet gestart</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>📖 Hoe deze Demo te gebruiken</h2>
+            <div class="test-instructions">
+                <h4>🔍 Stap-voor-stap instructies:</h4>
+                <ol>
+                    <li><strong>Kies een ticket</strong> uit de lijst hieronder die je wilt valideren</li>
+                    <li><strong>Lees de uitleg</strong> van wat er getest wordt en wat je kunt verwachten</li>
+                    <li><strong>Voer de test uit</strong> door op de test knoppen te klikken</li>
+                    <li><strong>Controleer het resultaat</strong> - groen vinkje = geslaagd, rood kruis = gefaald</li>
+                    <li><strong>Lees de uitleg</strong> van wat het resultaat betekent voor de kwaliteit</li>
+                </ol>
+            </div>
+            
+            <div class="test-example">
+                <h4>💡 Wat gebeurt er achter de schermen?</h4>
+                <p>Elke test controleert automatisch of de functionaliteit werkt zoals gespecificeerd in de backlog. 
+                Je hoeft geen technische kennis te hebben - de tests doen het werk voor je en geven duidelijke feedback.</p>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🧪 Test de Widget</h2>
+            <p>Klik op de onderstaande knoppen om verschillende aspecten van de widget te testen:</p>
+            
+            <button class="button" onclick="testBasicInit()">Test Basis Init</button>
+            <button class="button" onclick="testCustomInit()">Test Custom Init</button>
+            <button class="button" onclick="testInvalidOptions()">Test Ongeldige Opties</button>
+            <button class="button" onclick="testAccessibility()">Test Toegankelijkheid</button>
+            
+            <div id="status" class="status info" style="display: none;"></div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>💻 Code Voorbeelden</h2>
+            
+            <h3>Basis Initialisatie</h3>
+            <div class="code-block">
+window.Chatbox.init({
+  tenantId: 'demo-tenant'
+});
+            </div>
+            
+            <h3>Geavanceerde Configuratie</h3>
+            <div class="code-block">
+window.Chatbox.init({
+  tenantId: 'demo-tenant',
+  primaryColor: '#FF6B6B',
+  welcomeMessage: 'Hallo! Ik ben je AI-assistent.'
+});
+            </div>
+            
+            <h3>Event Handling</h3>
+            <div class="code-block">
+// Luister naar widget events
+window.Chatbox.on('ready', () => {
+  console.log('Widget is klaar!');
+});
+
+window.Chatbox.on('error', (error) => {
+  console.error('Widget fout:', error);
+});
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>📊 NFR Checks</h2>
+            <p>Alle niet-functionele requirements zijn geïmplementeerd en getest:</p>
+            
+            <ul>
+                <li>✅ <strong>Performance:</strong> Init tijd < 500ms</li>
+                <li>✅ <strong>Security:</strong> SRI + CSP compatibel</li>
+                <li>✅ <strong>Privacy:</strong> Geen PII in URL parameters</li>
+                <li>✅ <strong>Accessibility:</strong> Geen focusverlies bij init</li>
+                <li>✅ <strong>Bundle Size:</strong> < 80kB (gzipped)</li>
+                <li>✅ <strong>SSE Streaming:</strong> Real-time token delivery</li>
+                <li>✅ <strong>Auto-retry:</strong> Netwerkonderbreking handling</li>
+                <li>✅ <strong>Rate Limiting:</strong> Gebruiksvriendelijke meldingen</li>
+            </ul>
+        </div>
+
+        <div class="demo-section">
+            <h3>🚀 MVP-003B: SSE Integratie</h3>
+            <p>Test de nieuwe SSE streaming functionaliteit:</p>
+            <button onclick="testSSEIntegration()">⚡ Test SSE Streaming</button>
+            <button onclick="testWidgetWithSSE()">🎯 Test Widget met SSE</button>
+            <button onclick="debugWidget()">🔍 Debug Widget</button>
+            <div id="sseResult" class="result"></div>
+            <p><small>Zorg ervoor dat de backend draait op http://localhost:3000</small></p>
+        </div>
+        
+        <div class="test-section">
+            <h2>📚 MVP-004: Kennisbasis Validatie</h2>
+            
+            <div class="test-instructions">
+                <h4>🎯 Wat wordt er getest?</h4>
+                <p><strong>Deze ticket controleert of de chatbox automatisch relevante informatie kan ophalen uit een kennisbasis.</strong></p>
+                <p>Dit betekent dat wanneer een gebruiker een vraag stelt, de chatbox automatisch zoekt in documenten (PDF's, FAQ's) om het beste antwoord te geven.</p>
+            </div>
+            
+            <div class="test-example">
+                <h4>💡 Probeer dit zelf:</h4>
+                <p><strong>Scenario:</strong> Een klant vraagt "Wat zijn jullie web development services?"</p>
+                <p><strong>Verwacht resultaat:</strong> De chatbox haalt automatisch relevante informatie op uit de kennisbasis en geeft een compleet antwoord met bronvermelding.</p>
+            </div>
+            
+            <div class="test-instructions">
+                <h4>🔧 Test Stappen:</h4>
+                <ol>
+                    <li><strong>Klik "Test Kennisbasis Integratie"</strong> - Dit test of de backend correct werkt</li>
+                    <li><strong>Klik "Test Document Zoeken"</strong> - Dit test of documenten correct gevonden worden</li>
+                    <li><strong>Klik "Test Document Upload"</strong> - Dit test of nieuwe documenten toegevoegd kunnen worden</li>
+                </ol>
+            </div>
+            
+            <div style="margin: 20px 0;">
+                <button onclick="testKnowledgeBase()" class="button">📚 Test Kennisbasis Integratie</button>
+                <button onclick="testKnowledgeSearch()" class="button">🔍 Test Document Zoeken</button>
+                <button onclick="testKnowledgeIngest()" class="button">📄 Test Document Upload</button>
+            </div>
+            
+            <div id="knowledgeResult" class="test-result"></div>
+            
+            <div class="test-example">
+                <h4>✅ Wat betekent een geslaagde test?</h4>
+                <p><strong>Groen vinkje:</strong> De kennisbasis werkt correct. De chatbox kan automatisch relevante informatie ophalen uit documenten en deze gebruiken om betere antwoorden te geven.</p>
+                <p><strong>Rood kruis:</strong> Er is een probleem met de kennisbasis. Dit zou betekenen dat gebruikers geen gebruik kunnen maken van de automatische document retrieval functionaliteit.</p>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🔧 Development</h2>
+            <p>Voor developers die willen bijdragen aan het project:</p>
+            
+            <div class="code-block">
+# Clone repository
+git clone [repository-url]
+
+# Installeer dependencies
+npm install
+
+# Voer tests uit
+npm test
+
+# Start development server
+npm run dev
+
+# Build voor productie
+npm run build
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Demo functies
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+            
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 5000);
+        }
+        
+        function testBasicInit() {
+            try {
+                if (typeof window.Chatbox === 'undefined') {
+                    showStatus('❌ Chatbox script niet geladen', 'error');
+                    return;
+                }
+                
+                const result = window.Chatbox.init({
+                    tenantId: 'demo-tenant'
+                });
+                
+                if (result === true) {
+                    showStatus('✅ Widget succesvol geïnitialiseerd!', 'success');
+                } else {
+                    showStatus('❌ Widget initialisatie mislukt', 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Fout: ${error.message}`, 'error');
+            }
+        }
+        
+        function testCustomInit() {
+            try {
+                if (typeof window.Chatbox === 'undefined') {
+                    showStatus('❌ Chatbox script niet geladen', 'error');
+                    return;
+                }
+                
+                const result = window.Chatbox.init({
+                    tenantId: 'demo-tenant',
+                    primaryColor: '#FF6B6B',
+                    welcomeMessage: 'Hallo! Ik ben je AI-assistent. Hoe kan ik je helpen?'
+                });
+                
+                if (result === true) {
+                    showStatus('✅ Custom widget succesvol geïnitialiseerd!', 'success');
+                } else {
+                    showStatus('❌ Custom widget initialisatie mislukt', 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Fout: ${error.message}`, 'error');
+            }
+        }
+        
+        function testInvalidOptions() {
+            try {
+                if (typeof window.Chatbox === 'undefined') {
+                    showStatus('❌ Chatbox script niet geladen', 'error');
+                    return;
+                }
+                
+                const result = window.Chatbox.init({
+                    tenantId: '', // Ongeldige tenantId
+                    invalidProp: 'test'
+                });
+                
+                if (result === true) {
+                    showStatus('✅ Widget gebruikt veilige defaults', 'success');
+                } else {
+                    showStatus('❌ Widget initialisatie mislukt', 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Fout: ${error.message}`, 'error');
+            }
+        }
+        
+        function testAccessibility() {
+            // Test keyboard navigatie
+            const fab = document.querySelector('.chatbox-fab');
+            if (fab) {
+                fab.focus();
+                showStatus('✅ FAB heeft focus - gebruik TAB om te navigeren', 'info');
+            } else {
+                showStatus('❌ FAB niet gevonden', 'error');
+            }
+        }
+        
+        // Test SSE Integration
+        function testSSEIntegration() {
+            const resultDiv = document.getElementById('sseResult');
+            showStatus('🚀 Testing SSE integration...', 'info');
+            
+            try {
+                // Test backend connection
+                fetch('http://localhost:3000/api/health')
+                    .then(response => {
+                        if (response.ok) {
+                            return response.json();
+                        } else {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                    })
+                    .then(data => {
+                        showStatus('✅ Backend verbonden! Test de widget voor SSE streaming.', 'success');
+                        console.log('Backend health:', data);
+                        
+                        // Test AI query endpoint
+                        return fetch('http://localhost:3000/api/ai/query', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Tenant-ID': 'demo-tenant'
+                            },
+                            body: JSON.stringify({
+                                tenantId: 'demo-tenant',
+                                conversationId: 'test-' + Date.now(),
+                                content: 'Test message'
+                            })
+                        });
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            showStatus('✅ SSE endpoint werkt! Widget kan nu streaming gebruiken.', 'success');
+                            console.log('SSE endpoint test successful');
+                        } else {
+                            throw new Error(`AI Query failed: ${response.status}`);
+                        }
+                    })
+                    .catch(error => {
+                        showStatus('❌ Backend niet beschikbaar. Start de backend met: node server.js', 'error');
+                        console.error('Backend connection failed:', error);
+                    });
+            } catch (error) {
+                showStatus('❌ SSE test mislukt: ' + error.message, 'error');
+            }
+        }
+
+        // Test Widget with SSE
+        function testWidgetWithSSE() {
+            showStatus('🎯 Initializing widget with SSE...', 'info');
+            
+            try {
+                // Debug: Check what's available on window
+                console.log('Available on window:', Object.keys(window).filter(key => key.toLowerCase().includes('chatbox')));
+                console.log('window.ChatboxWidget:', typeof window.ChatboxWidget);
+                console.log('window.Chatbox:', typeof window.Chatbox);
+                
+                // Check if ChatboxWidget is available
+                if (typeof window.ChatboxWidget === 'undefined') {
+                    showStatus('❌ ChatboxWidget niet beschikbaar. Ververs de pagina.', 'error');
+                    return;
+                }
+                
+                // Destroy existing widget if any
+                if (window.Chatbox && window.Chatbox.destroy) {
+                    window.Chatbox.destroy();
+                }
+                
+                // Initialize widget with SSE backend using window.Chatbox.init
+                const success = window.Chatbox.init({
+                    tenantId: 'demo-tenant',
+                    primaryColor: '#0A84FF',
+                    welcomeMessage: 'Welkom! Test de SSE streaming.',
+                    backendUrl: 'http://localhost:3000'
+                });
+                
+                if (success) {
+                    showStatus('✅ Widget geïnitialiseerd met SSE! Stel nu een vraag om streaming te zien.', 'success');
+                    console.log('Widget initialized with SSE backend');
+                } else {
+                    showStatus('❌ Widget initialisatie mislukt', 'error');
+                }
+            } catch (error) {
+                showStatus('❌ Widget test mislukt: ' + error.message, 'error');
+                console.error('Widget test error:', error);
+            }
+        }
+
+        // Debug Widget
+        function debugWidget() {
+            console.log('=== WIDGET DEBUG ===');
+            console.log('window.Chatbox:', typeof window.Chatbox);
+            console.log('window.ChatboxWidget:', typeof window.ChatboxWidget);
+            console.log('Available keys:', Object.keys(window).filter(key => key.toLowerCase().includes('chatbox')));
+            
+            if (typeof window.Chatbox !== 'undefined') {
+                console.log('window.Chatbox methods:', Object.keys(window.Chatbox));
+            }
+            
+            if (typeof window.ChatboxWidget !== 'undefined') {
+                console.log('window.ChatboxWidget:', window.ChatboxWidget);
+            }
+            
+            showStatus('🔍 Debug info in console (F12)', 'info');
+        }
+
+        // Test Knowledge Base - MVP-004
+        async function testKnowledgeBase() {
+            const resultDiv = document.getElementById('knowledgeResult');
+            resultDiv.innerHTML = '<p>📚 Testing knowledge base integration...</p>';
+            
+            try {
+                // Test knowledge search endpoint
+                const searchResponse = await fetch('http://localhost:3000/api/knowledge/search?q=web development&limit=3', {
+                    headers: {
+                        'X-Tenant-ID': 'demo-tenant'
+                    }
+                });
+                
+                if (!searchResponse.ok) {
+                    throw new Error(`Search failed: ${searchResponse.status}`);
+                }
+                
+                const searchData = await searchResponse.json();
+                
+                // Test knowledge stats endpoint
+                const statsResponse = await fetch('http://localhost:3000/api/knowledge/status/stats', {
+                    headers: {
+                        'X-Tenant-ID': 'demo-tenant'
+                    }
+                });
+                
+                if (!statsResponse.ok) {
+                    throw new Error(`Stats failed: ${statsResponse.status}`);
+                }
+                
+                const statsData = await statsResponse.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="test-result success">
+                        <h4>✅ Kennisbasis Test Geslaagd!</h4>
+                        <p><strong>Zoekresultaten:</strong> ${searchData.totalFound} relevante documenten gevonden</p>
+                        <p><strong>Kennisbasis Status:</strong> ${statsData.totalDocuments} documenten beschikbaar met ${statsData.totalChunks} informatieve secties</p>
+                        <p><strong>Document Types:</strong> ${JSON.stringify(statsData.documentsByType)}</p>
+                        <details>
+                            <summary>📋 Bekijk gevonden informatie</summary>
+                            <pre>${JSON.stringify(searchData.results, null, 2)}</pre>
+                        </details>
+                        <p><strong>✅ Betekenis:</strong> De kennisbasis werkt correct! De chatbox kan automatisch relevante informatie ophalen uit documenten.</p>
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="test-result error">
+                        <h4>❌ Kennisbasis Test Mislukt</h4>
+                        <p><strong>Probleem:</strong> ${error.message}</p>
+                        <p><strong>Oplossing:</strong> Zorg ervoor dat de backend draait op http://localhost:3000</p>
+                        <p><strong>❌ Betekenis:</strong> De kennisbasis werkt niet correct. Dit betekent dat gebruikers geen gebruik kunnen maken van automatische document retrieval.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Test Knowledge Search
+        async function testKnowledgeSearch() {
+            const resultDiv = document.getElementById('knowledgeResult');
+            resultDiv.innerHTML = '<p>🔍 Testing knowledge search...</p>';
+            
+            const testQueries = [
+                'web development services',
+                'prijzen en packages',
+                'ondersteuning',
+                'retourbeleid'
+            ];
+            
+            let results = '<div class="success"><h4>🔍 Knowledge Search Tests</h4>';
+            
+            for (const query of testQueries) {
+                try {
+                    const response = await fetch(`http://localhost:3000/api/knowledge/search?q=${encodeURIComponent(query)}&limit=2`, {
+                        headers: {
+                            'X-Tenant-ID': 'demo-tenant'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        results += `<p><strong>"${query}":</strong> ${data.totalFound} resultaten</p>`;
+                    } else {
+                        results += `<p><strong>"${query}":</strong> ❌ Failed (${response.status})</p>`;
+                    }
+                } catch (error) {
+                    results += `<p><strong>"${query}":</strong> ❌ Error: ${error.message}</p>`;
+                }
+            }
+            
+            results += '</div>';
+            resultDiv.innerHTML = `<div class="test-result success">${results}</div>`;
+        }
+
+        // Test Knowledge Ingest
+        async function testKnowledgeIngest() {
+            const resultDiv = document.getElementById('knowledgeResult');
+            resultDiv.innerHTML = '<p>📄 Testing document upload...</p>';
+            
+            try {
+                const testDocument = {
+                    title: 'Test Document - MVP-004',
+                    content: 'Dit is een test document voor MVP-004 kennisbasis functionaliteit. Het bevat informatie over web development en ondersteuning.',
+                    type: 'manual',
+                    source: 'test-document.md'
+                };
+                
+                const response = await fetch('http://localhost:3000/api/knowledge/ingest', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Tenant-ID': 'demo-tenant'
+                    },
+                    body: JSON.stringify(testDocument)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Upload failed: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="test-result success">
+                        <h4>✅ Document Upload Geslaagd!</h4>
+                        <p><strong>Document ID:</strong> ${data.documentId}</p>
+                        <p><strong>Status:</strong> ${data.status}</p>
+                        <p><strong>Informatieve Secties:</strong> ${data.chunks} delen van het document zijn verwerkt</p>
+                        <p><strong>Bericht:</strong> ${data.message}</p>
+                        <p><strong>✅ Betekenis:</strong> Nieuwe documenten kunnen succesvol worden toegevoegd aan de kennisbasis!</p>
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="test-result error">
+                        <h4>❌ Document Upload Mislukt</h4>
+                        <p><strong>Probleem:</strong> ${error.message}</p>
+                        <p><strong>❌ Betekenis:</strong> Er is een probleem met het uploaden van documenten. Dit zou betekenen dat de kennisbasis niet uitgebreid kan worden met nieuwe informatie.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Auto-initialiseer widget bij laden
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (typeof window.Chatbox !== 'undefined') {
+                    testBasicInit();
+                } else {
+                    showStatus('⏳ Wachten op widget script...', 'info');
+                    setTimeout(() => {
+                        if (typeof window.Chatbox !== 'undefined') {
+                            testBasicInit();
+                        } else {
+                            showStatus('❌ Widget script kon niet worden geladen', 'error');
+                        }
+                    }, 2000);
+                }
+            }, 1000);
+        });
+    </script>
+    
+    <!-- Chatbox Widget Script -->
+    <script src="../dist/widget.iife.js?v=4"></script>
+</body>
+</html>

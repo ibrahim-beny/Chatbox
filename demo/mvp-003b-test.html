@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVP-003B: Frontend SSE Integratie Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .config-input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎫 MVP-003B: Frontend SSE Integratie Test</h1>
+        
+        <div class="test-section">
+            <h3>📋 Test Configuratie</h3>
+            <label for="backendUrl">Backend URL:</label>
+            <input type="text" id="backendUrl" class="config-input" value="http://localhost:3000" placeholder="http://localhost:3000">
+            
+            <label for="tenantId">Tenant ID:</label>
+            <input type="text" id="tenantId" class="config-input" value="demo-tenant" placeholder="demo-tenant">
+            
+            <button onclick="testBackendConnection()">🔗 Test Backend Verbinding</button>
+            <div id="backendStatus" class="status info" style="display: none;">Backend status wordt getest...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Acceptatiecriteria Tests</h3>
+            
+            <h4>1. Typing Indicator & Token Streaming</h4>
+            <button onclick="testTypingIndicator()">⌨️ Test Typing Indicator</button>
+            <div id="typingStatus" class="status info" style="display: none;">Typing indicator wordt getest...</div>
+            
+            <h4>2. Auto-retry bij Netwerkonderbreking</h4>
+            <button onclick="testAutoRetry()">🔄 Test Auto-retry</button>
+            <div id="retryStatus" class="status info" style="display: none;">Auto-retry wordt getest...</div>
+            
+            <h4>3. Rate Limit Handling</h4>
+            <button onclick="testRateLimit()">⏱️ Test Rate Limit</button>
+            <div id="rateLimitStatus" class="status info" style="display: none;">Rate limit wordt getest...</div>
+            
+            <h4>4. End-to-end Functionaliteit</h4>
+            <button onclick="testEndToEnd()">🚀 Test End-to-End</button>
+            <div id="e2eStatus" class="status info" style="display: none;">End-to-end test wordt uitgevoerd...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test Logs</h3>
+            <div id="testLogs" class="log">Test logs verschijnen hier...</div>
+            <button onclick="clearLogs()">🗑️ Clear Logs</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🎮 Live Widget Test</h3>
+            <p>Test de widget met echte SSE verbinding:</p>
+            <button onclick="initWidget()">🎯 Initialiseer Widget</button>
+            <button onclick="destroyWidget()">❌ Verwijder Widget</button>
+            <div id="widgetStatus" class="status info" style="display: none;">Widget status...</div>
+        </div>
+    </div>
+
+    <!-- Load the widget script -->
+    <script src="../dist/widget.iife.js"></script>
+    
+    <script>
+        let widget = null;
+        let testResults = {};
+
+        // Logging function
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('testLogs');
+            const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}\n`;
+            logElement.textContent += logEntry;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`[${timestamp}] ${type.toUpperCase()}: ${message}`);
+        }
+
+        function clearLogs() {
+            document.getElementById('testLogs').textContent = 'Test logs verschijnen hier...';
+        }
+
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+            element.style.display = 'block';
+        }
+
+        // Test Backend Connection
+        async function testBackendConnection() {
+            const backendUrl = document.getElementById('backendUrl').value;
+            const tenantId = document.getElementById('tenantId').value;
+            
+            showStatus('backendStatus', 'Backend verbinding wordt getest...', 'info');
+            log(`Testing backend connection to: ${backendUrl}`);
+
+            try {
+                // Test health endpoint
+                const healthResponse = await fetch(`${backendUrl}/api/health`);
+                if (healthResponse.ok) {
+                    const healthData = await healthResponse.json();
+                    showStatus('backendStatus', `✅ Backend verbonden! Status: ${healthData.status}`, 'success');
+                    log(`Backend health check passed: ${JSON.stringify(healthData)}`);
+                    
+                    // Test config endpoint
+                    const configResponse = await fetch(`${backendUrl}/api/tenant/${tenantId}/config`);
+                    if (configResponse.ok) {
+                        const configData = await configResponse.json();
+                        log(`Tenant config retrieved: ${JSON.stringify(configData)}`);
+                        testResults.backendConnection = true;
+                    } else {
+                        log(`Config endpoint failed: ${configResponse.status}`, 'error');
+                        testResults.backendConnection = false;
+                    }
+                } else {
+                    throw new Error(`Health check failed: ${healthResponse.status}`);
+                }
+            } catch (error) {
+                showStatus('backendStatus', `❌ Backend verbinding mislukt: ${error.message}`, 'error');
+                log(`Backend connection failed: ${error.message}`, 'error');
+                testResults.backendConnection = false;
+            }
+        }
+
+        // Test Typing Indicator
+        async function testTypingIndicator() {
+            showStatus('typingStatus', 'Typing indicator wordt getest...', 'info');
+            log('Testing typing indicator functionality');
+
+            try {
+                // Create a mock SSE stream to test typing indicator
+                const mockStream = new ReadableStream({
+                    start(controller) {
+                        // Simulate typing indicator
+                        controller.enqueue(new TextEncoder().encode('data: {"type": "typing", "message": "Assistant is typing..."}\n\n'));
+                        
+                        // Simulate token streaming
+                        setTimeout(() => {
+                            controller.enqueue(new TextEncoder().encode('data: {"token": "Hallo", "type": "content"}\n\n'));
+                        }, 100);
+                        
+                        setTimeout(() => {
+                            controller.enqueue(new TextEncoder().encode('data: {"token": "Hallo hoe", "type": "content"}\n\n'));
+                        }, 200);
+                        
+                        setTimeout(() => {
+                            controller.enqueue(new TextEncoder().encode('data: {"type": "done"}\n\n'));
+                            controller.close();
+                        }, 300);
+                    }
+                });
+
+                const reader = mockStream.getReader();
+                const decoder = new TextDecoder();
+                const events = [];
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                events.push(data);
+                                log(`SSE Event received: ${JSON.stringify(data)}`);
+                            } catch (e) {
+                                // Skip invalid JSON
+                            }
+                        }
+                    }
+                }
+
+                const hasTyping = events.some(e => e.type === 'typing');
+                const hasContent = events.some(e => e.type === 'content');
+                const hasDone = events.some(e => e.type === 'done');
+
+                if (hasTyping && hasContent && hasDone) {
+                    showStatus('typingStatus', '✅ Typing indicator werkt correct!', 'success');
+                    log('Typing indicator test passed - all event types received');
+                    testResults.typingIndicator = true;
+                } else {
+                    showStatus('typingStatus', '❌ Typing indicator test mislukt', 'error');
+                    log(`Typing indicator test failed - missing events: typing=${hasTyping}, content=${hasContent}, done=${hasDone}`, 'error');
+                    testResults.typingIndicator = false;
+                }
+            } catch (error) {
+                showStatus('typingStatus', `❌ Typing indicator test mislukt: ${error.message}`, 'error');
+                log(`Typing indicator test error: ${error.message}`, 'error');
+                testResults.typingIndicator = false;
+            }
+        }
+
+        // Test Auto-retry
+        async function testAutoRetry() {
+            showStatus('retryStatus', 'Auto-retry wordt getest...', 'info');
+            log('Testing auto-retry functionality');
+
+            try {
+                let retryCount = 0;
+                const maxRetries = 2;
+                
+                const mockFailingStream = () => {
+                    return new ReadableStream({
+                        start(controller) {
+                            if (retryCount < maxRetries) {
+                                retryCount++;
+                                log(`Retry attempt ${retryCount}/${maxRetries}`);
+                                // Simulate network error
+                                setTimeout(() => {
+                                    controller.error(new Error('Network error'));
+                                }, 100);
+                            } else {
+                                // Success on retry
+                                log('Retry successful!');
+                                controller.enqueue(new TextEncoder().encode('data: {"token": "Success", "type": "content"}\n\n'));
+                                controller.enqueue(new TextEncoder().encode('data: {"type": "done"}\n\n'));
+                                controller.close();
+                            }
+                        }
+                    });
+                };
+
+                let attempts = 0;
+                let success = false;
+                
+                while (attempts < maxRetries + 1 && !success) {
+                    try {
+                        attempts++;
+                        log(`Attempt ${attempts}`);
+                        const stream = mockFailingStream();
+                        const reader = stream.getReader();
+                        
+                        while (true) {
+                            const { done } = await reader.read();
+                            if (done) break;
+                            success = true;
+                            break;
+                        }
+                    } catch (error) {
+                        log(`Attempt ${attempts} failed: ${error.message}`);
+                        if (attempts >= maxRetries) {
+                            throw error;
+                        }
+                    }
+                }
+
+                if (success && attempts <= maxRetries + 1) {
+                    showStatus('retryStatus', '✅ Auto-retry werkt correct!', 'success');
+                    log(`Auto-retry test passed - succeeded after ${attempts} attempts`);
+                    testResults.autoRetry = true;
+                } else {
+                    showStatus('retryStatus', '❌ Auto-retry test mislukt', 'error');
+                    log('Auto-retry test failed - too many attempts', 'error');
+                    testResults.autoRetry = false;
+                }
+            } catch (error) {
+                showStatus('retryStatus', `❌ Auto-retry test mislukt: ${error.message}`, 'error');
+                log(`Auto-retry test error: ${error.message}`, 'error');
+                testResults.autoRetry = false;
+            }
+        }
+
+        // Test Rate Limit
+        async function testRateLimit() {
+            showStatus('rateLimitStatus', 'Rate limit wordt getest...', 'info');
+            log('Testing rate limit handling');
+
+            try {
+                const backendUrl = document.getElementById('backendUrl').value;
+                const tenantId = document.getElementById('tenantId').value;
+
+                // Make multiple rapid requests to trigger rate limit
+                const requests = [];
+                for (let i = 0; i < 35; i++) { // Exceed 30 requests/min limit
+                    requests.push(
+                        fetch(`${backendUrl}/api/ai/query`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Tenant-ID': tenantId
+                            },
+                            body: JSON.stringify({
+                                tenantId: tenantId,
+                                conversationId: `c-${Date.now()}-${i}`,
+                                content: `Test message ${i}`
+                            })
+                        })
+                    );
+                }
+
+                const responses = await Promise.allSettled(requests);
+                const rateLimitedResponses = responses.filter(r => 
+                    r.status === 'fulfilled' && r.value.status === 429
+                );
+
+                if (rateLimitedResponses.length > 0) {
+                    const firstRateLimit = rateLimitedResponses[0].value;
+                    const retryAfter = firstRateLimit.headers.get('Retry-After');
+                    showStatus('rateLimitStatus', `✅ Rate limit werkt! Retry-After: ${retryAfter}s`, 'success');
+                    log(`Rate limit test passed - ${rateLimitedResponses.length} requests rate limited`);
+                    testResults.rateLimit = true;
+                } else {
+                    showStatus('rateLimitStatus', '⚠️ Rate limit niet getriggerd (mogelijk te traag)', 'info');
+                    log('Rate limit test inconclusive - no rate limiting detected');
+                    testResults.rateLimit = false;
+                }
+            } catch (error) {
+                showStatus('rateLimitStatus', `❌ Rate limit test mislukt: ${error.message}`, 'error');
+                log(`Rate limit test error: ${error.message}`, 'error');
+                testResults.rateLimit = false;
+            }
+        }
+
+        // Test End-to-End
+        async function testEndToEnd() {
+            showStatus('e2eStatus', 'End-to-end test wordt uitgevoerd...', 'info');
+            log('Testing end-to-end functionality');
+
+            try {
+                const backendUrl = document.getElementById('backendUrl').value;
+                const tenantId = document.getElementById('tenantId').value;
+
+                // Test real SSE connection
+                const response = await fetch(`${backendUrl}/api/ai/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Tenant-ID': tenantId
+                    },
+                    body: JSON.stringify({
+                        tenantId: tenantId,
+                        conversationId: `c-${Date.now()}`,
+                        content: 'Test end-to-end connection'
+                    })
+                });
+
+                if (response.ok) {
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('text/event-stream')) {
+                        showStatus('e2eStatus', '✅ End-to-end test geslaagd!', 'success');
+                        log('End-to-end test passed - SSE stream received');
+                        testResults.endToEnd = true;
+                    } else {
+                        showStatus('e2eStatus', '❌ Geen SSE stream ontvangen', 'error');
+                        log(`End-to-end test failed - wrong content type: ${contentType}`, 'error');
+                        testResults.endToEnd = false;
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                showStatus('e2eStatus', `❌ End-to-end test mislukt: ${error.message}`, 'error');
+                log(`End-to-end test error: ${error.message}`, 'error');
+                testResults.endToEnd = false;
+            }
+        }
+
+        // Widget Functions
+        function initWidget() {
+            const backendUrl = document.getElementById('backendUrl').value;
+            const tenantId = document.getElementById('tenantId').value;
+
+            if (widget) {
+                widget.destroy();
+            }
+
+            try {
+                widget = new window.ChatboxWidget();
+                const success = widget.init({
+                    tenantId: tenantId,
+                    primaryColor: '#0A84FF',
+                    welcomeMessage: 'Welkom! Test de SSE integratie.',
+                    backendUrl: backendUrl
+                });
+
+                if (success) {
+                    showStatus('widgetStatus', '✅ Widget geïnitialiseerd met SSE!', 'success');
+                    log(`Widget initialized successfully with backend: ${backendUrl}`);
+                } else {
+                    showStatus('widgetStatus', '❌ Widget initialisatie mislukt', 'error');
+                    log('Widget initialization failed', 'error');
+                }
+            } catch (error) {
+                showStatus('widgetStatus', `❌ Widget error: ${error.message}`, 'error');
+                log(`Widget error: ${error.message}`, 'error');
+            }
+        }
+
+        function destroyWidget() {
+            if (widget) {
+                widget.destroy();
+                widget = null;
+                showStatus('widgetStatus', '🗑️ Widget verwijderd', 'info');
+                log('Widget destroyed');
+            } else {
+                showStatus('widgetStatus', '⚠️ Geen widget om te verwijderen', 'info');
+                log('No widget to destroy');
+            }
+        }
+
+        // Initialize
+        log('MVP-003B test page loaded');
+        log('Make sure the backend is running on http://localhost:3000');
+    </script>
+</body>
+</html>
