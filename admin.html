@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbox Admin Interface - MVP-005</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #0A84FF;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #0A84FF;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .section {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .section h2 {
+            margin-bottom: 20px;
+            color: #1d1d1f;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #1d1d1f;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d2d2d7;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #0A84FF;
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .btn {
+            background: #0A84FF;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background: #007AFF;
+        }
+
+        .btn:disabled {
+            background: #d2d2d7;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #6e6e73;
+        }
+
+        .btn-secondary:hover {
+            background: #5e5e64;
+        }
+
+        .search-results {
+            margin-top: 20px;
+        }
+
+        .search-result {
+            background: #f5f5f7;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #0A84FF;
+        }
+
+        .search-result h4 {
+            margin-bottom: 8px;
+            color: #1d1d1f;
+        }
+
+        .search-result p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .search-result .score {
+            color: #0A84FF;
+            font-weight: bold;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .error {
+            background: #ff3b30;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .success {
+            background: #30d158;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .tenant-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .tenant-selector select {
+            flex: 1;
+            max-width: 200px;
+        }
+
+        .refresh-btn {
+            background: #6e6e73;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .refresh-btn:hover {
+            background: #5e5e64;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tenant-selector {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .tenant-selector select {
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Chatbox Admin Interface</h1>
+            <p>MVP-005: Database Implementatie voor Kennisbasis - Admin Dashboard</p>
+        </div>
+
+        <div class="tenant-selector">
+            <label for="tenantSelect">Tenant:</label>
+            <select id="tenantSelect">
+                <option value="demo-tenant">TechCorp Solutions</option>
+                <option value="test-tenant">RetailMax</option>
+            </select>
+            <button class="refresh-btn" onclick="loadStats()">🔄 Refresh</button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalDocuments">-</div>
+                <div class="stat-label">Totaal Documenten</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalChunks">-</div>
+                <div class="stat-label">Totaal Chunks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="lastUpdated">-</div>
+                <div class="stat-label">Laatst Bijgewerkt</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📚 Kennisbasis Zoeken</h2>
+            <div class="form-group">
+                <label for="searchQuery">Zoekterm:</label>
+                <input type="text" id="searchQuery" placeholder="Bijvoorbeeld: web development, prijzen, ondersteuning...">
+            </div>
+            <button class="btn" onclick="searchKnowledge()">🔍 Zoeken</button>
+            <div id="searchResults" class="search-results"></div>
+        </div>
+
+        <div class="section">
+            <h2>📄 Document Toevoegen</h2>
+            <div class="form-group">
+                <label for="docTitle">Titel:</label>
+                <input type="text" id="docTitle" placeholder="Bijvoorbeeld: Product Catalogus 2024">
+            </div>
+            <div class="form-group">
+                <label for="docType">Type:</label>
+                <select id="docType">
+                    <option value="pdf">PDF Document</option>
+                    <option value="faq">FAQ</option>
+                    <option value="manual">Handleiding</option>
+                    <option value="other">Anders</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="docContent">Inhoud:</label>
+                <textarea id="docContent" placeholder="Voer hier de inhoud van het document in..."></textarea>
+            </div>
+            <button class="btn" onclick="addDocument()">➕ Document Toevoegen</button>
+            <div id="addResult"></div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Database Status</h2>
+            <div id="dbStatus" class="loading">Database status wordt geladen...</div>
+            <button class="btn btn-secondary" onclick="checkDatabaseStatus()">🔄 Status Controleren</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        let currentTenant = 'demo-tenant';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            checkDatabaseStatus();
+            
+            // Tenant selector change
+            document.getElementById('tenantSelect').addEventListener('change', function() {
+                currentTenant = this.value;
+                loadStats();
+            });
+        });
+
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/knowledge/status/stats`, {
+                    headers: {
+                        'X-Tenant-ID': currentTenant
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const stats = await response.json();
+                
+                document.getElementById('totalDocuments').textContent = stats.totalDocuments || 0;
+                document.getElementById('totalChunks').textContent = stats.totalChunks || 0;
+                
+                if (stats.lastUpdated) {
+                    const date = new Date(stats.lastUpdated);
+                    document.getElementById('lastUpdated').textContent = date.toLocaleDateString('nl-NL');
+                } else {
+                    document.getElementById('lastUpdated').textContent = 'Onbekend';
+                }
+                
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                document.getElementById('totalDocuments').textContent = 'Error';
+                document.getElementById('totalChunks').textContent = 'Error';
+                document.getElementById('lastUpdated').textContent = 'Error';
+            }
+        }
+
+        async function searchKnowledge() {
+            const query = document.getElementById('searchQuery').value.trim();
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (!query) {
+                resultsDiv.innerHTML = '<div class="error">Voer een zoekterm in</div>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = '<div class="loading">Zoeken...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/knowledge/search?q=${encodeURIComponent(query)}&limit=10`, {
+                    headers: {
+                        'X-Tenant-ID': currentTenant
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.results && data.results.length > 0) {
+                    resultsDiv.innerHTML = `
+                        <h3>🔍 Zoekresultaten (${data.totalFound} gevonden)</h3>
+                        ${data.results.map(result => `
+                            <div class="search-result">
+                                <h4>${result.document.title}</h4>
+                                <p><strong>Type:</strong> ${result.document.type || 'Onbekend'}</p>
+                                <p><strong>Score:</strong> <span class="score">${(result.score * 100).toFixed(1)}%</span></p>
+                                <p><strong>Inhoud:</strong> ${result.snippet}</p>
+                            </div>
+                        `).join('')}
+                    `;
+                } else {
+                    resultsDiv.innerHTML = '<div class="error">Geen resultaten gevonden</div>';
+                }
+                
+            } catch (error) {
+                console.error('Error searching knowledge:', error);
+                resultsDiv.innerHTML = `<div class="error">Zoeken mislukt: ${error.message}</div>`;
+            }
+        }
+
+        async function addDocument() {
+            const title = document.getElementById('docTitle').value.trim();
+            const type = document.getElementById('docType').value;
+            const content = document.getElementById('docContent').value.trim();
+            const resultDiv = document.getElementById('addResult');
+            
+            if (!title || !content) {
+                resultDiv.innerHTML = '<div class="error">Titel en inhoud zijn verplicht</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<div class="loading">Document wordt toegevoegd...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/knowledge/ingest`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Tenant-ID': currentTenant
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        type: type,
+                        content: content,
+                        source: 'admin-interface'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Document succesvol toegevoegd!<br>
+                        Document ID: ${result.documentId}<br>
+                        Status: ${result.status}<br>
+                        Chunks: ${result.chunks}
+                    </div>
+                `;
+                
+                // Clear form
+                document.getElementById('docTitle').value = '';
+                document.getElementById('docContent').value = '';
+                
+                // Refresh stats
+                loadStats();
+                
+            } catch (error) {
+                console.error('Error adding document:', error);
+                resultDiv.innerHTML = `<div class="error">Document toevoegen mislukt: ${error.message}</div>`;
+            }
+        }
+
+        async function checkDatabaseStatus() {
+            const statusDiv = document.getElementById('dbStatus');
+            statusDiv.innerHTML = '<div class="loading">Database status wordt gecontroleerd...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const health = await response.json();
+                
+                statusDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Database Status: ${health.status}<br>
+                        Timestamp: ${new Date(health.timestamp).toLocaleString('nl-NL')}<br>
+                        AI Service: ${health.services.ai}<br>
+                        Database Service: ${health.services.database}
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Error checking database status:', error);
+                statusDiv.innerHTML = `<div class="error">Database status controleren mislukt: ${error.message}</div>`;
+            }
+        }
+
+        // Enter key support for search
+        document.getElementById('searchQuery').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchKnowledge();
+            }
+        });
+    </script>
+</body>
+</html>
