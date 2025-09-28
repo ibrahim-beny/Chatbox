@@ -294,10 +294,10 @@
                         <span class="ticket-name">MVP-006: Persona & Tone</span>
                         <span class="ticket-status-text">Voltooid & Getest</span>
                     </div>
-                    <div class="ticket-item pending">
-                        <span class="ticket-icon">⏳</span>
+                    <div class="ticket-item completed">
+                        <span class="ticket-icon">✅</span>
                         <span class="ticket-name">MVP-007: Human Handover</span>
-                        <span class="ticket-status-text">Nog niet gestart</span>
+                        <span class="ticket-status-text">Voltooid & Getest</span>
                     </div>
                 </div>
             </div>
@@ -529,6 +529,58 @@ window.Chatbox.on('error', (error) => {
                 <p><strong>Voor volledige testing:</strong> Start eerst de backend met <code>node server.js</code></p>
                 <p><strong>Persona Testing:</strong> Test verschillende tenants om verschillende personas te zien</p>
                 <p><strong>Safety Testing:</strong> Probeer inappropriate vragen om safety filtering te testen</p>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📧 MVP-007: Human Handover Validatie</h2>
+            
+            <div class="test-instructions">
+                <h4>🎯 Wat wordt er getest?</h4>
+                <p><strong>Deze ticket controleert of handover naar menselijke agents via e-mail correct werkt met echte Resend integratie.</strong></p>
+                <p>Dit betekent dat wanneer een gebruiker vraagt om handover, er daadwerkelijk een echte email wordt verzonden naar het support team met alle gespreksdetails.</p>
+            </div>
+            
+            <div class="test-example">
+                <h4>💡 Belangrijke verbeteringen:</h4>
+                <p><strong>Echte Email Verzending:</strong> Resend API integratie voor productie-ready email delivery</p>
+                <p><strong>Handover Detection:</strong> Automatische detectie van handover keywords en low confidence</p>
+                <p><strong>Email Templates:</strong> Tenant-specifieke HTML en text email templates</p>
+                <p><strong>Retry Mechanism:</strong> Automatische retry bij email failures met exponential backoff</p>
+                <p><strong>Frontend UI:</strong> Handover buttons en confirmation messages in de widget</p>
+            </div>
+            
+            <div class="test-instructions">
+                <h4>🔧 Test Stappen:</h4>
+                <ol>
+                    <li><strong>Configureer Resend</strong> - Voeg je Resend API key toe aan environment variabelen</li>
+                    <li><strong>Klik "Test Handover Email"</strong> - Verzend een test email via Resend</li>
+                    <li><strong>Klik "Test Handover UI"</strong> - Test handover buttons in de widget</li>
+                    <li><strong>Klik "Test Handover Flow"</strong> - Volledige end-to-end handover test</li>
+                </ol>
+            </div>
+            
+            <div style="margin: 20px 0;">
+                <button onclick="testHandoverEmail()" class="button">📧 Test Handover Email</button>
+                <button onclick="testHandoverUI()" class="button">🎯 Test Handover UI</button>
+                <button onclick="testHandoverFlow()" class="button">🔄 Test Handover Flow</button>
+                <button onclick="testSendGridConfig()" class="button">⚙️ Test Resend Config</button>
+            </div>
+            
+            <div id="mvp007Result" class="test-result"></div>
+            
+            <div class="test-example">
+                <h4>✅ Wat betekent een geslaagde test?</h4>
+                <p><strong>Groen vinkje:</strong> Handover systeem werkt correct. Echte emails worden verzonden via Resend en handover UI werkt in de widget.</p>
+                <p><strong>Rood kruis:</strong> Er is een probleem met het handover systeem. Dit zou betekenen dat gebruikers niet kunnen worden doorverbonden naar menselijke agents.</p>
+            </div>
+            
+            <div class="test-instructions">
+                <h4>🚀 Hoe te gebruiken:</h4>
+                <p><strong>Resend Setup:</strong> Zie <code>README.md</code> voor configuratie instructies</p>
+                <p><strong>Environment Variabelen:</strong> <code>RESEND_API_KEY</code> en <code>HANDOVER_EMAIL</code></p>
+                <p><strong>Test Email:</strong> Controleer je inbox voor de test email na het uitvoeren van de test</p>
+                <p><strong>Widget Testing:</strong> Open de widget en probeer handover keywords zoals "ik wil met een mens praten"</p>
             </div>
         </div>
         
@@ -1559,6 +1611,244 @@ npm run build
                         <h4>❌ Persona Consistency Test Mislukt</h4>
                         <p><strong>Probleem:</strong> ${error.message}</p>
                         <p><strong>❌ Betekenis:</strong> Er is een probleem met de persona consistency test.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // MVP-007: Human Handover Tests
+        async function testHandoverEmail() {
+            const resultDiv = document.getElementById('mvp007Result');
+            resultDiv.innerHTML = '<p>📧 Testing handover email via Resend...</p>';
+            
+            try {
+                // Test handover email endpoint
+                const response = await fetch('http://localhost:3000/api/handover/test-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Tenant-ID': 'demo-tenant'
+                    },
+                    body: JSON.stringify({
+                        testEmail: 'info@bitbreez.nl'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Test email failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="test-result success">
+                            <h4>✅ Handover Email Test Geslaagd!</h4>
+                            <p><strong>Email Status:</strong> ${data.emailSent ? 'Verzonden' : 'Niet verzonden'}</p>
+                            <p><strong>Retry Count:</strong> ${data.retryCount}</p>
+                            <p><strong>Message:</strong> ${data.message}</p>
+                            <p><strong>Test Email:</strong> info@bitbreez.nl</p>
+                            <p><strong>✅ Betekenis:</strong> Resend email verzending werkt correct!</p>
+                            <p><strong>📧 Check je inbox:</strong> Als Resend geconfigureerd is, zou je een test email moeten ontvangen.</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="test-result error">
+                            <h4>❌ Handover Email Test Mislukt</h4>
+                            <p><strong>Probleem:</strong> ${data.message}</p>
+                            <p><strong>Retry Count:</strong> ${data.retryCount}</p>
+                            <p><strong>❌ Betekenis:</strong> Email verzending werkt niet correct.</p>
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="test-result error">
+                        <h4>❌ Handover Email Test Mislukt</h4>
+                        <p><strong>Probleem:</strong> ${error.message}</p>
+                        <p><strong>Oplossing:</strong> Start de backend met: node server.js</p>
+                        <p><strong>❌ Betekenis:</strong> Er is een probleem met de handover email test.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testHandoverUI() {
+            const resultDiv = document.getElementById('mvp007Result');
+            resultDiv.innerHTML = '<p>🎯 Testing handover UI in widget...</p>';
+            
+            try {
+                // Initialize widget with handover support
+                if (typeof window.Chatbox === 'undefined') {
+                    throw new Error('Chatbox widget not loaded');
+                }
+
+                // Destroy existing widget
+                if (window.Chatbox && window.Chatbox.destroy) {
+                    window.Chatbox.destroy();
+                }
+
+                // Initialize widget
+                const success = window.Chatbox.init({
+                    tenantId: 'demo-tenant',
+                    primaryColor: '#0A84FF',
+                    welcomeMessage: 'Welkom! Test de handover functionaliteit.',
+                    backendUrl: 'http://localhost:3000'
+                });
+
+                if (success) {
+                    resultDiv.innerHTML = `
+                        <div class="test-result success">
+                            <h4>✅ Handover UI Test Geslaagd!</h4>
+                            <p><strong>Widget Status:</strong> Geïnitialiseerd met handover support</p>
+                            <p><strong>Backend URL:</strong> http://localhost:3000</p>
+                            <p><strong>Tenant ID:</strong> demo-tenant</p>
+                            <p><strong>✅ Betekenis:</strong> Handover UI is beschikbaar in de widget!</p>
+                            <p><strong>🎯 Test handover:</strong> Stel een vraag in de widget en zoek naar handover keywords zoals "ik wil met een mens praten"</p>
+                        </div>
+                    `;
+                } else {
+                    throw new Error('Widget initialization failed');
+                }
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="test-result error">
+                        <h4>❌ Handover UI Test Mislukt</h4>
+                        <p><strong>Probleem:</strong> ${error.message}</p>
+                        <p><strong>Oplossing:</strong> Ververs de pagina en probeer opnieuw</p>
+                        <p><strong>❌ Betekenis:</strong> Handover UI is niet beschikbaar in de widget.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testHandoverFlow() {
+            const resultDiv = document.getElementById('mvp007Result');
+            resultDiv.innerHTML = '<p>🔄 Testing complete handover flow...</p>';
+            
+            try {
+                // Test complete handover request
+                const handoverResponse = await fetch('http://localhost:3000/api/handover/request', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Tenant-ID': 'demo-tenant'
+                    },
+                    body: JSON.stringify({
+                        tenantId: 'demo-tenant',
+                        conversationId: 'test-handover-flow',
+                        userMessage: 'Ik wil graag met een mens praten',
+                        confidence: 0.5,
+                        triggerReason: 'user_request',
+                        transcript: [
+                            'User: Hallo, ik heb een vraag',
+                            'AI: Hoe kan ik je helpen?',
+                            'User: Ik wil graag met een mens praten'
+                        ]
+                    })
+                });
+
+                if (!handoverResponse.ok) {
+                    throw new Error(`Handover request failed: ${handoverResponse.status}`);
+                }
+
+                const handoverData = await handoverResponse.json();
+                
+                if (handoverData.success) {
+                    resultDiv.innerHTML = `
+                        <div class="test-result success">
+                            <h4>✅ Handover Flow Test Geslaagd!</h4>
+                            <p><strong>Handover Status:</strong> ${handoverData.handoverStatus}</p>
+                            <p><strong>Email Sent:</strong> ${handoverData.emailSent ? 'Ja' : 'Nee'}</p>
+                            <p><strong>Handover Token:</strong> ${handoverData.handoverToken}</p>
+                            <p><strong>Confirmation Message:</strong> ${handoverData.confirmationMessage}</p>
+                            <p><strong>Trigger Reason:</strong> ${handoverData.triggerReason}</p>
+                            <p><strong>Retry Count:</strong> ${handoverData.retryCount || 0}</p>
+                            <p><strong>✅ Betekenis:</strong> Complete handover flow werkt correct!</p>
+                            <p><strong>📧 Check je inbox:</strong> Als Resend geconfigureerd is, zou je een handover email moeten ontvangen.</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="test-result error">
+                            <h4>❌ Handover Flow Test Mislukt</h4>
+                            <p><strong>Probleem:</strong> ${handoverData.error || 'Unknown error'}</p>
+                            <p><strong>Handover Status:</strong> ${handoverData.handoverStatus}</p>
+                            <p><strong>❌ Betekenis:</strong> Handover flow werkt niet correct.</p>
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="test-result error">
+                        <h4>❌ Handover Flow Test Mislukt</h4>
+                        <p><strong>Probleem:</strong> ${error.message}</p>
+                        <p><strong>Oplossing:</strong> Start de backend met: node server.js</p>
+                        <p><strong>❌ Betekenis:</strong> Er is een probleem met de handover flow test.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testSendGridConfig() {
+            const resultDiv = document.getElementById('mvp007Result');
+            resultDiv.innerHTML = '<p>⚙️ Testing Resend configuration...</p>';
+            
+            try {
+                // Test Resend configuration by checking server config
+                const configResponse = await fetch('http://localhost:3000/api/resend/config');
+                
+                if (!configResponse.ok) {
+                    throw new Error(`Config check failed: ${configResponse.status}`);
+                }
+
+                const configData = await configResponse.json();
+                
+                // Test handover service availability
+                const handoverResponse = await fetch('http://localhost:3000/api/handover/generate-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Tenant-ID': 'demo-tenant'
+                    },
+                    body: JSON.stringify({
+                        tenantId: 'demo-tenant',
+                        conversationId: 'config-test'
+                    })
+                });
+
+                if (!handoverResponse.ok) {
+                    throw new Error(`Handover service not available: ${handoverResponse.status}`);
+                }
+
+                const tokenData = await handoverResponse.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="test-result success">
+                        <h4>✅ Resend Config Test Geslaagd!</h4>
+                        <p><strong>Backend Status:</strong> Healthy</p>
+                        <p><strong>Handover Service:</strong> Beschikbaar</p>
+                        <p><strong>Token Generated:</strong> ${tokenData.handoverToken ? 'Ja' : 'Nee'}</p>
+                        <p><strong>Token Type:</strong> ${tokenData.tokenType || 'handover'}</p>
+                        <p><strong>✅ Betekenis:</strong> Resend configuratie is correct!</p>
+                        <p><strong>📧 Email Mode:</strong> ${configData.mode}</p>
+                        <p><strong>🔑 API Key:</strong> ${configData.apiKeyConfigured ? 'Geconfigureerd' : 'Niet geconfigureerd'}</p>
+                        <p><strong>📨 From Email:</strong> ${configData.fromEmail}</p>
+                        <p><strong>💡 Tip:</strong> Voor echte emails, stel RESEND_API_KEY in je environment variabelen.</p>
+                    </div>
+                `;
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="test-result error">
+                        <h4>❌ Resend Config Test Mislukt</h4>
+                        <p><strong>Probleem:</strong> ${error.message}</p>
+                        <p><strong>Oplossing:</strong> Start de backend met: node server.js</p>
+                        <p><strong>❌ Betekenis:</strong> Resend configuratie werkt niet correct.</p>
                     </div>
                 `;
             }

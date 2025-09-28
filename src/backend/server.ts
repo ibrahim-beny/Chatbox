@@ -2,18 +2,21 @@ import { AIQueryHandler } from './api/ai-query.js';
 import { ConfigHandler } from './api/config.js';
 import { HealthHandler } from './api/health.js';
 import { PersonaConfigHandler } from './api/persona-config.js';
+import { HandoverHandler } from './api/handover.js';
 
 export class ChatboxServer {
   private aiQueryHandler: AIQueryHandler;
   private configHandler: ConfigHandler;
   private healthHandler: HealthHandler;
   private personaConfigHandler: PersonaConfigHandler;
+  private handoverHandler: HandoverHandler;
 
   constructor() {
     this.aiQueryHandler = new AIQueryHandler();
     this.configHandler = new ConfigHandler();
     this.healthHandler = new HealthHandler();
     this.personaConfigHandler = new PersonaConfigHandler();
+    this.handoverHandler = new HandoverHandler();
   }
 
   async handleRequest(request: Request): Promise<Response> {
@@ -61,6 +64,10 @@ export class ChatboxServer {
           });
         }
         return await this.aiQueryHandler.handleRequest(request);
+      }
+
+      if (path.startsWith('/handover/')) {
+        return await this.handoverHandler.handleRequest(request);
       }
 
       // 404 for unknown routes

@@ -35,6 +35,8 @@ export class ChatboxWidget {
   private typingIndicator: TypingIndicator | null = null;
   private streamingMessage: StreamingMessage | null = null;
   private knowledgeSearch: KnowledgeSearchService | null = null;
+  private conversationId: string = '';
+  private conversationTranscript: string[] = [];
 
   constructor() {
     this.config = {
@@ -485,11 +487,17 @@ export class ChatboxWidget {
     this.streamingMessage.startStreaming();
 
     // Connect to SSE and stream response with knowledge context
-    const conversationId = `c-${Date.now()}`;
+    this.conversationId = `c-${Date.now()}`;
     const enhancedMessage = knowledgeContext ? `${message}${knowledgeContext}` : message;
     
+    // Add to conversation transcript
+    this.conversationTranscript.push(`User: ${message}`);
+    
+    // Check for handover triggers immediately after user message
+    this.checkHandoverTriggers(message);
+    
     this.sseClient.connect(
-      conversationId,
+      this.conversationId,
       enhancedMessage,
       (event) => this.handleSSEEvent(event),
       (error) => this.handleSSEError(error)
@@ -532,6 +540,12 @@ export class ChatboxWidget {
         if (this.streamingMessage) {
           this.streamingMessage.finishStreaming();
           this.scrollToBottom(messagesContainer);
+          
+          // Add assistant response to transcript
+          const assistantResponse = this.streamingMessage.getCurrentText();
+          this.conversationTranscript.push(`Assistant: ${assistantResponse}`);
+          
+          // Handover triggers are now checked immediately after user message
         }
         this.enableInput();
         break;
@@ -608,6 +622,180 @@ export class ChatboxWidget {
    */
   private scrollToBottom(container: HTMLElement): void {
     container.scrollTop = container.scrollHeight;
+  }
+
+  /**
+   * Check if handover should be triggered based on user input
+   */
+  private checkHandoverTriggers(userMessage: string): void {
+    const lowerMessage = userMessage.toLowerCase();
+    
+    // Check for handover keywords in user message
+    const handoverKeywords = [
+      'mens', 'mensen', 'agent', 'klantenservice', 'bellen', 'human',
+      'ik wil met een mens praten', 'kan ik bellen', 'doorverbinden',
+      'handover', 'escalatie', 'mensen praten'
+    ];
+    
+    const hasHandoverKeyword = handoverKeywords.some(keyword => 
+      lowerMessage.includes(keyword)
+    );
+    
+    // Check for frustration patterns
+    const frustrationPatterns = [
+      'dit werkt niet', 'ik ben gefrustreerd', 'dit is belachelijk',
+      'waarom werkt dit niet', 'ik begrijp het niet'
+    ];
+    
+    const hasFrustration = frustrationPatterns.some(pattern => 
+      lowerMessage.includes(pattern)
+    );
+    
+    if (hasHandoverKeyword || hasFrustration) {
+      this.showHandoverOption();
+    }
+  }
+
+  /**
+   * Show handover option to user
+   */
+  private showHandoverOption(): void {
+    const messagesContainer = this.drawer?.querySelector('.chatbox-messages') as HTMLElement;
+    if (!messagesContainer) return;
+
+    // Create handover suggestion message
+    const handoverMessage = this.createHandoverMessage();
+    messagesContainer.appendChild(handoverMessage);
+    this.scrollToBottom(messagesContainer);
+  }
+
+  /**
+   * Create handover suggestion message with button
+   */
+  private createHandoverMessage(): HTMLElement {
+    const message = document.createElement('div');
+    message.className = 'chatbox-message chatbox-message-assistant chatbox-handover-message';
+    message.setAttribute('role', 'listitem');
+    
+    const content = document.createElement('div');
+    content.className = 'chatbox-message-content';
+    content.innerHTML = `
+      <p>Wil je graag met een menselijke collega praten? Ik kan je vraag doorsturen naar ons support team.</p>
+      <div class="chatbox-handover-actions">
+        <button class="chatbox-handover-button chatbox-handover-yes" aria-label="Ja, stuur door naar menselijke collega">
+          Ja, stuur door
+        </button>
+        <button class="chatbox-handover-button chatbox-handover-no" aria-label="Nee, blijf chatten met AI">
+          Nee, blijf chatten
+        </button>
+      </div>
+    `;
+    
+    const timestamp = document.createElement('div');
+    timestamp.className = 'chatbox-message-timestamp';
+    timestamp.textContent = new Date().toLocaleTimeString('nl-NL', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+    
+    message.appendChild(content);
+    message.appendChild(timestamp);
+    
+    // Add event listeners to buttons
+    const yesButton = message.querySelector('.chatbox-handover-yes') as HTMLButtonElement;
+    const noButton = message.querySelector('.chatbox-handover-no') as HTMLButtonElement;
+    
+    yesButton?.addEventListener('click', () => {
+      this.requestHandover();
+    });
+    
+    noButton?.addEventListener('click', () => {
+      this.hideHandoverMessage(message);
+    });
+    
+    return message;
+  }
+
+  /**
+   * Request handover to human agent
+   */
+  private async requestHandover(): Promise<void> {
+    try {
+      const response = await fetch(`${this.config.backendUrl}/api/handover/request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': this.config.tenantId
+        },
+        body: JSON.stringify({
+          tenantId: this.config.tenantId,
+          conversationId: this.conversationId,
+          userMessage: this.conversationTranscript[this.conversationTranscript.length - 1] || 'Handover requested',
+          confidence: 0.5, // Low confidence triggers handover
+          triggerReason: 'user_request',
+          transcript: this.conversationTranscript
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        this.showHandoverConfirmation(data);
+      } else {
+        this.showHandoverError(data.error || 'Handover request failed');
+      }
+    } catch (error) {
+      console.error('Handover request failed:', error);
+      this.showHandoverError('Er is een fout opgetreden bij het doorsturen van je vraag.');
+    }
+  }
+
+  /**
+   * Show handover confirmation message
+   */
+  private showHandoverConfirmation(data: any): void {
+    const messagesContainer = this.drawer?.querySelector('.chatbox-messages') as HTMLElement;
+    if (!messagesContainer) return;
+
+    const confirmationMessage = this.createMessage('assistant', 
+      data.confirmationMessage || 'Je vraag is doorgestuurd naar een menselijke collega. Je ontvangt binnen 1 uur een reactie via e-mail.'
+    );
+    
+    messagesContainer.appendChild(confirmationMessage);
+    this.scrollToBottom(messagesContainer);
+    
+    // Hide any existing handover messages
+    const handoverMessages = messagesContainer.querySelectorAll('.chatbox-handover-message');
+    handoverMessages.forEach(msg => this.hideHandoverMessage(msg as HTMLElement));
+  }
+
+  /**
+   * Show handover error message
+   */
+  private showHandoverError(error: string): void {
+    const messagesContainer = this.drawer?.querySelector('.chatbox-messages') as HTMLElement;
+    if (!messagesContainer) return;
+
+    const errorMessage = this.createMessage('assistant', 
+      `Sorry, er is een fout opgetreden: ${error}. Probeer het later opnieuw.`
+    );
+    
+    messagesContainer.appendChild(errorMessage);
+    this.scrollToBottom(messagesContainer);
+  }
+
+  /**
+   * Hide handover message
+   */
+  private hideHandoverMessage(message: HTMLElement): void {
+    message.style.opacity = '0.5';
+    message.style.pointerEvents = 'none';
+    
+    // Update button text to show it was dismissed
+    const content = message.querySelector('.chatbox-message-content') as HTMLElement;
+    if (content) {
+      content.innerHTML = '<p><em>Handover optie weggeklikt</em></p>';
+    }
   }
 
   /**
@@ -914,6 +1102,57 @@ export class ChatboxWidget {
          51%, 100% {
            opacity: 0;
          }
+       }
+
+       .chatbox-handover-message {
+         border: 2px solid ${this.config.primaryColor};
+         background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+       }
+
+       .chatbox-handover-actions {
+         display: flex;
+         gap: 8px;
+         margin-top: 12px;
+         flex-wrap: wrap;
+       }
+
+       .chatbox-handover-button {
+         padding: 8px 16px;
+         border: none;
+         border-radius: 20px;
+         font-size: 13px;
+         font-weight: 500;
+         cursor: pointer;
+         transition: all 0.2s ease;
+         flex: 1;
+         min-width: 120px;
+       }
+
+       .chatbox-handover-yes {
+         background-color: ${this.config.primaryColor};
+         color: white;
+       }
+
+       .chatbox-handover-yes:hover {
+         background-color: ${this.config.primaryColor}dd;
+         transform: translateY(-1px);
+         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+       }
+
+       .chatbox-handover-no {
+         background-color: #f3f4f6;
+         color: #6b7280;
+         border: 1px solid #d1d5db;
+       }
+
+       .chatbox-handover-no:hover {
+         background-color: #e5e7eb;
+         color: #374151;
+       }
+
+       .chatbox-handover-button:focus {
+         outline: 2px solid ${this.config.primaryColor};
+         outline-offset: 2px;
        }
 
              @media (max-width: 768px) {
