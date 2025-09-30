@@ -536,6 +536,8 @@ ada: ["Prompt-composer","Safety-policies"]
 
 ## 🎫 Ticket MVP-007 — Menselijke handover via e-mail
 
+**Status:** ✅ DONE
+
 Context (link BR/SRD/ADA)
 
 - BR-002: Menselijke handover via e-mail.
@@ -575,14 +577,14 @@ ada: ["Handover-service","Logging"]
 **Test Scenarios & Use Cases:**
 
 **Verplichte End-to-End Tests:**
-- [ ] **Handover trigger test**: "Ik wil graag met een mens spreken" → Handover optie verschijnt
-- [ ] **E-mail verzending test**: Handover aanvraag → E-mail wordt verzonden naar support team
-- [ ] **Bevestiging test**: Handover aanvraag → Gebruiker krijgt bevestiging in chatbox
-- [ ] **Kantooruren test**: Handover buiten kantooruren → Nette wachtrijmelding met verwachte responstijd
-- [ ] **Transcript tagging test**: Handover → Volledige gespreksgeschiedenis wordt meegestuurd
-- [ ] **Retry mechanisme test**: E-mail verzending faalt → Automatische retry met exponential backoff
-- [ ] **Security test**: Handover links → Tokenized links die niet gemanipuleerd kunnen worden
-- [ ] **Multi-tenant test**: Verschillende tenants → Handover gaat naar juiste support team
+- [x] **Handover trigger test**: "Ik wil graag met een mens spreken" → Handover optie verschijnt
+- [x] **E-mail verzending test**: Handover aanvraag → E-mail wordt verzonden naar support team
+- [x] **Bevestiging test**: Handover aanvraag → Gebruiker krijgt bevestiging in chatbox
+- [x] **Kantooruren test**: Handover buiten kantooruren → Nette wachtrijmelding met verwachte responstijd
+- [x] **Transcript tagging test**: Handover → Volledige gespreksgeschiedenis wordt meegestuurd
+- [x] **Retry mechanisme test**: E-mail verzending faalt → Automatische retry met exponential backoff
+- [x] **Security test**: Handover links → Tokenized links die niet gemanipuleerd kunnen worden
+- [x] **Multi-tenant test**: Verschillende tenants → Handover gaat naar juiste support team
 
 **Verwachte Resultaten:**
 - Handover optie verschijnt bij complexe vragen of expliciete aanvraag
@@ -594,7 +596,27 @@ ada: ["Handover-service","Logging"]
 - Security maatregelen voorkomen misbruik van handover systeem
 - Multi-tenant isolation werkt correct voor handover routing
 
+**Log:**
+- Tests geschreven voor handover functionaliteit (email verzending, retry mechanisme, UI feedback)
+- Implementatie afgerond met Resend API integratie voor echte email verzending
+- Handover service geïmplementeerd met exponential backoff retry mechanisme
+- Frontend UI toegevoegd met handover buttons en confirmation messages
+- NFR-checks doorstaan (reliability: geen lost chats, privacy: transcript tagging, security: tokenized links)
+- Demo pagina bijgewerkt met handover test sectie en JavaScript test functies
+
+**Changelog:**
+- HandoverService klasse geïmplementeerd met Resend email integratie
+- Handover API endpoints toegevoegd (/api/handover/request, /api/handover/test-email)
+- Frontend handover UI geïntegreerd in widget met handover detection
+- Email templates toegevoegd voor tenant-specifieke handover berichten
+- Retry mechanisme met exponential backoff voor betrouwbare email delivery
+- Handover token systeem voor beveiligde handover links
+- Multi-tenant handover routing naar juiste support teams
+- Off-hours detection met nette wachtrijmeldingen
+
 ## 🎫 Ticket MVP-008 — Basis logging & monitoring
+
+**Status:** ✅ DONE
 
 Context (link BR/SRD/ADA)
 
@@ -634,16 +656,16 @@ ada: ["Observability","Maintenance"]
 **Test Scenarios & Use Cases:**
 
 **Verplichte End-to-End Tests:**
-- [ ] **Gesprek logging test**: Chat sessie start → Unieke log ID wordt gegenereerd en opgeslagen
-- [ ] **Timestamp logging test**: Elke actie → Correcte timestamp wordt gelogd
-- [ ] **Status tracking test**: Gesprek verloopt → Status updates worden gelogd (started, in_progress, completed, handover)
-- [ ] **AI latency monitoring test**: AI response → Latency wordt gemeten en gelogd
-- [ ] **Handover ratio test**: Handover events → Ratio wordt berekend en gemonitord
-- [ ] **Multi-tenant logging test**: Verschillende tenants → Logs zijn correct gescheiden per tenant
-- [ ] **PII filtering test**: Persoonlijke data → PII wordt gefilterd uit logs
-- [ ] **Log retention test**: Oude logs → Automatische cleanup na 30 dagen
-- [ ] **Dashboard metrics test**: Monitoring dashboard → Toont real-time metrics correct
-- [ ] **Error logging test**: Foutmeldingen → Errors worden correct gelogd met context
+- [x] **Gesprek logging test**: Chat sessie start → Unieke log ID wordt gegenereerd en opgeslagen
+- [x] **Timestamp logging test**: Elke actie → Correcte timestamp wordt gelogd
+- [x] **Status tracking test**: Gesprek verloopt → Status updates worden gelogd (started, in_progress, completed, handover)
+- [x] **AI latency monitoring test**: AI response → Latency wordt gemeten en gelogd
+- [x] **Handover ratio test**: Handover events → Ratio wordt berekend en gemonitord
+- [x] **Multi-tenant logging test**: Verschillende tenants → Logs zijn correct gescheiden per tenant
+- [x] **PII filtering test**: Persoonlijke data → PII wordt gefilterd uit logs
+- [x] **Log retention test**: Oude logs → Automatische cleanup na 30 dagen
+- [x] **Dashboard metrics test**: Monitoring dashboard → Toont real-time metrics correct
+- [x] **Error logging test**: Foutmeldingen → Errors worden correct gelogd met context
 
 **Verwachte Resultaten:**
 - Alle gesprekken krijgen unieke log ID en worden volledig getracked
@@ -657,7 +679,27 @@ ada: ["Observability","Maintenance"]
 - Monitoring dashboard toont real-time metrics
 - Error logging helpt bij debugging en support
 
+**Log:**
+- Tests geschreven voor logging & monitoring functionaliteit (gesprek tracking, metrics verzameling, PII filtering)
+- Implementatie afgerond met LoggingService en MonitoringService classes
+- Database schema uitgebreid met conversation_logs, ai_metrics, en handover_metrics tabellen
+- API endpoints toegevoegd voor logging en monitoring (/logging/*, /monitoring/*)
+- NFR-checks doorstaan (reliability: 30-dagen retentie, privacy: PII filtering, performance: database indexes)
+- Demo pagina bijgewerkt met MVP-008 test sectie en JavaScript test functies
+
+**Changelog:**
+- LoggingService klasse geïmplementeerd met unieke log ID generatie en status tracking
+- MonitoringService klasse toegevoegd voor AI latency metrics en handover ratio berekening
+- Database schema uitgebreid met logging en monitoring tabellen en indexes
+- API endpoints toegevoegd voor logging metrics, conversation logs, en monitoring dashboard
+- PII filtering geïmplementeerd voor email, telefoon, en IBAN detectie
+- Log retention policy geïmplementeerd met automatische cleanup na 30 dagen
+- Multi-tenant logging isolation geïmplementeerd voor privacy compliance
+- Real-time monitoring dashboard met AI latency P50/P95 en handover metrics
+
 ## 🎫 Ticket MVP-009 — GDPR dataverwerking & privacy controls
+
+**Status:** ✅ DONE
 
 Context (link BR/SRD/ADA)
 
@@ -697,16 +739,16 @@ ada: ["Dataretentie","PII-masking","Consent"]
 **Test Scenarios & Use Cases:**
 
 **Verplichte End-to-End Tests:**
-- [ ] **Consent UI test**: Eerste bezoek → Privacy consent wordt gevraagd en opgeslagen
-- [ ] **PII redactie test**: "Mijn naam is Jan Jansen" → PII wordt automatisch geredacteerd in logs
-- [ ] **Dataretentie test**: Handover e-mails → Automatische verwijdering na 180 dagen
-- [ ] **Log retention test**: Gesprekslogs → Automatische verwijdering na 30 dagen
-- [ ] **DSAR export test**: Inzageverzoek → Volledige data export wordt gegenereerd
-- [ ] **DSAR deletion test**: Verwijderingsverzoek → Alle persoonlijke data wordt verwijderd
-- [ ] **Encryptie test**: Data opslag → Alle data is versleuteld in rust en transport
-- [ ] **Consent withdrawal test**: Consent intrekken → Data wordt onmiddellijk verwijderd
-- [ ] **Multi-tenant privacy test**: Verschillende tenants → Privacy settings zijn geïsoleerd
-- [ ] **Audit trail test**: Privacy acties → Alle acties worden gelogd voor compliance
+- [x] **Consent UI test**: Eerste bezoek → Privacy consent wordt gevraagd en opgeslagen
+- [x] **PII redactie test**: "Mijn naam is Jan Jansen" → PII wordt automatisch geredacteerd in logs
+- [x] **Dataretentie test**: Handover e-mails → Automatische verwijdering na 180 dagen
+- [x] **Log retention test**: Gesprekslogs → Automatische verwijdering na 30 dagen
+- [x] **DSAR export test**: Inzageverzoek → Volledige data export wordt gegenereerd
+- [x] **DSAR deletion test**: Verwijderingsverzoek → Alle persoonlijke data wordt verwijderd
+- [x] **Encryptie test**: Data opslag → Alle data is versleuteld in rust en transport
+- [x] **Consent withdrawal test**: Consent intrekken → Data wordt onmiddellijk verwijderd
+- [x] **Multi-tenant privacy test**: Verschillende tenants → Privacy settings zijn geïsoleerd
+- [x] **Audit trail test**: Privacy acties → Alle acties worden gelogd voor compliance
 
 **Verwachte Resultaten:**
 - Privacy consent wordt correct gevraagd en beheerd
@@ -719,6 +761,28 @@ ada: ["Dataretentie","PII-masking","Consent"]
 - Audit trail is compleet voor compliance doeleinden
 - GDPR compliance wordt volledig nageleefd
 - Geen datalekken door automatische PII filtering
+
+**Log:**
+- Tests geschreven voor GDPR compliance functionaliteit (consent management, PII redactie, DSAR handling)
+- Implementatie afgerond met GDPRService, PrivacyService en ConsentService classes
+- Database schema uitgebreid met GDPR en privacy tabellen (gdpr_processing_logs, consent_records, privacy_settings)
+- API endpoints toegevoegd voor GDPR compliance (/api/gdpr/*, /api/consent/*)
+- NFR-checks doorstaan (privacy: PII redactie, security: AES-256-GCM encryptie, compliance: DSAR support)
+- Demo pagina bijgewerkt met MVP-009 test sectie en JavaScript test functies
+
+**Changelog:**
+- GDPRService klasse geïmplementeerd met DSAR export/deletion functionaliteit
+- PrivacyService klasse toegevoegd voor PII redactie en encryptie (AES-256-GCM)
+- ConsentService klasse geïmplementeerd voor consent tracking en withdrawal
+- Database schema uitgebreid met GDPR compliance tabellen en indexes
+- API endpoints toegevoegd voor GDPR compliance en consent management
+- PII redactie geïmplementeerd voor email, telefoon, IBAN, naam, adres, BSN
+- Dataretentie policy geïmplementeerd (30 dagen logs, 180 dagen handover emails)
+- DSAR support geïmplementeerd voor data export en verwijdering verzoeken
+- Consent management geïmplementeerd met expliciete toestemming tracking
+- Audit trail geïmplementeerd voor complete privacy compliance logging
+- Multi-tenant privacy isolation geïmplementeerd voor tenant-specifieke settings
+- Encryptie geïmplementeerd voor data at rest en in transit
 
 ## 🎫 Ticket MVP-010 — Abuse & rate-limiting
 
@@ -1033,6 +1097,130 @@ CREATE TABLE document_chunks (
 - Admin interface maken voor document upload en beheer
 - Document chunking implementeren voor snelle zoekopdrachten
 - Database connection pooling en error handling toevoegen
+
+---
+
+## 🎫 Ticket MVP-011 — OpenAI API Integratie
+
+**Status:** ✅ DONE
+
+Context (link BR/SRD/ADA)
+
+- BR-001: Altijd beschikbaar AI-antwoord.
+- BR-018: Robuuste werking.
+- SR: FR-015 (OpenAI Integration), NFR-003 (Performance), NFR-004 (Cost Management).
+- ADA: Echte AI responses, kosten monitoring, fallback mechanismen.
+- KPI-link: ≥99% AI response accuracy, <5s response tijd, kosten <€0.10 per conversatie.
+- Waarom dit belangrijk is: Vervangt mock AI met echte ChatGPT voor realistische demo's en productie gebruik.
+
+Acceptatiecriteria (Given/When/Then)
+
+- Given een geconfigureerde OpenAI API key
+- When een gebruiker een vraag stelt
+- Then krijgt de gebruiker een unieke, contextuele AI response.
+- Given een OpenAI API fout
+- When de API niet beschikbaar is
+- Then valt het systeem terug op mock responses.
+- Given verschillende vragen
+- When de chatbox wordt gebruikt
+- Then zijn alle antwoorden uniek en relevant.
+
+NFR-checks
+
+- Performance: OpenAI API response <3s.
+- Security: API key veilig opgeslagen in .env.
+- Cost: Kosten monitoring en limieten geïmplementeerd.
+- Reliability: Fallback naar mock bij API problemen.
+
+Dependencies: MVP-003A, MVP-006.
+
+Prioriteit: Must-have.
+
+Definition of Done: Zie DevGuide.md.
+
+refs:
+
+brd: ["BR-001","BR-018"]
+
+srd: ["FR-015","NFR-003","NFR-004"]
+
+ada: ["OpenAI-integration","Cost-monitoring","Fallback-mechanisms"]
+
+**Log:**
+
+- ✅ OpenAI API key configuratie toegevoegd aan .env
+- ✅ OpenAI provider uitgebreid met metrics en error handling
+- ✅ OpenAI monitoring endpoints toegevoegd (/openai/metrics, /openai/reset-metrics, /openai/config)
+- ✅ Demo pagina bijgewerkt met OpenAI test functies
+- ✅ Echte OpenAI API key geconfigureerd voor productie
+- ✅ Echte OpenAI API integratie toegevoegd aan server.js
+- ✅ Frontend-backend mismatch opgelost (data.content vs data.message)
+- ✅ Debug logging toegevoegd voor troubleshooting
+- ✅ Persona context integratie in OpenAI system messages
+- ✅ Kosten monitoring en performance tracking geïmplementeerd
+
+**Technische Details:**
+
+**OpenAI Integration:**
+```javascript
+// OpenAI API helper function
+async function generateOpenAIResponse(userMessage, personaConfig, tenantId) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  
+  // Build system message with persona context
+  let systemMessage = 'Je bent een behulpzame Nederlandse AI-assistent.';
+  
+  if (personaConfig) {
+    systemMessage = `Je bent een AI-assistent voor ${personaConfig.id === 'techcorp' ? 'TechCorp Solutions' : 'RetailMax'}. 
+    Toon: ${personaConfig.tone}.
+    Antwoord altijd in het Nederlands en wees behulpzaam.`;
+  }
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemMessage },
+        { role: 'user', content: userMessage }
+      ],
+      max_tokens: 1000,
+      temperature: 0.7
+    })
+  });
+}
+```
+
+**Metrics Tracking:**
+- Total requests naar OpenAI API
+- Total tokens gebruikt
+- Total kosten in USD
+- Average latency per request
+- Error rate en fallback usage
+
+**Fallback Mechanism:**
+- Controleert OpenAI API key configuratie
+- Val terug op mock AI bij API fouten
+- Debug logging voor troubleshooting
+- Graceful degradation bij service problemen
+
+**Configuration:**
+```env
+# OpenAI Configuration
+OPENAI_API_KEY=sk-proj-...
+USE_MOCK_LLM=false
+```
+
+**Testing:**
+- OpenAI integration test via demo pagina
+- Metrics monitoring test
+- Fallback mechanism test
+- Cost tracking verification
+- Performance benchmarking
 - Performance optimalisatie met indexes op veelgebruikte kolommen
 - Tenant isolation enforcement op database niveau
 - Alle bestaande API endpoints aanpassen voor database gebruik

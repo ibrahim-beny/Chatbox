@@ -4,15 +4,18 @@ import { ConfigService } from '../config-service.js';
 import { RateLimiter } from '../rate-limiter.js';
 import { ErrorHandler } from '../utils/error-handler.js';
 import { PersonaService } from '../services/persona-service.js';
+import { AbuseProtectionHandler } from './abuse-protection.js';
 
 export class AIQueryHandler {
   private configService: ConfigService;
   private rateLimiters: Map<string, RateLimiter> = new Map();
   private personaService: PersonaService;
+  private abuseProtection: AbuseProtectionHandler;
 
   constructor() {
     this.configService = new ConfigService();
     this.personaService = PersonaService.getInstance();
+    this.abuseProtection = new AbuseProtectionHandler();
   }
 
   async handleRequest(request: Request): Promise<Response> {
@@ -31,12 +34,37 @@ export class AIQueryHandler {
         return ErrorHandler.createErrorResponse('Tenant not found', 'TENANT_NOT_FOUND', 404);
       }
 
-      // Check rate limit
+      // WAF check first
+      const wafResult = this.abuseProtection.getWAFService().checkRequest(
+        request.method,
+        '/ai/query',
+        Object.fromEntries(request.headers.entries()),
+        JSON.stringify(chatRequest)
+      );
+      
+      if (wafResult.blocked) {
+        return ErrorHandler.createErrorResponse(
+          wafResult.reason || 'Request blocked by WAF',
+          'WAF_BLOCKED',
+          403
+        );
+      }
+
+      // Check rate limit with enhanced abuse protection
       const rateLimiter = this.getRateLimiter(config);
       if (!rateLimiter.isExemptPath('/ai/query')) {
-        const rateLimitCheck = rateLimiter.isAllowed(tenantId);
+        const userAgent = request.headers.get('User-Agent') || undefined;
+        const ipAddress = request.headers.get('X-Forwarded-For') || 
+                         request.headers.get('X-Real-IP') || 
+                         'unknown';
+        
+        const rateLimitCheck = rateLimiter.isAllowed(tenantId, userAgent, ipAddress);
         if (!rateLimitCheck.allowed) {
-          return ErrorHandler.createRateLimitResponse(rateLimitCheck.retryAfter);
+          return ErrorHandler.createRateLimitResponse(
+            rateLimitCheck.retryAfter, 
+            rateLimitCheck.reason,
+            rateLimitCheck.captchaRequired
+          );
         }
       }
 

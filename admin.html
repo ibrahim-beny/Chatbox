@@ -244,6 +244,22 @@
         <div class="header">
             <h1>🚀 Chatbox Admin Interface</h1>
             <p>MVP-005: Database Implementatie voor Kennisbasis - Admin Dashboard</p>
+            
+            <!-- Quick Status Overview -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px;">
+                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; text-align: center;">
+                    <div style="font-size: 1.5em; font-weight: bold; color: #0A84FF;" id="quickDocs">-</div>
+                    <div style="font-size: 0.9em; opacity: 0.8;">Documenten</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; text-align: center;">
+                    <div style="font-size: 1.5em; font-weight: bold; color: #0A84FF;" id="quickChunks">-</div>
+                    <div style="font-size: 0.9em; opacity: 0.8;">Chunks</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; text-align: center;">
+                    <div style="font-size: 1.5em; font-weight: bold; color: #0A84FF;" id="quickStatus">-</div>
+                    <div style="font-size: 0.9em; opacity: 0.8;">Status</div>
+                </div>
+            </div>
         </div>
 
         <div class="tenant-selector">
@@ -267,6 +283,18 @@
             <div class="stat-card">
                 <div class="stat-number" id="lastUpdated">-</div>
                 <div class="stat-label">Laatst Bijgewerkt</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalLogs">-</div>
+                <div class="stat-label">Totaal Logs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="aiLatency">-</div>
+                <div class="stat-label">AI Latency (ms)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="handoverRatio">-</div>
+                <div class="stat-label">Handover Ratio</div>
             </div>
         </div>
 
@@ -308,6 +336,25 @@
             <div id="dbStatus" class="loading">Database status wordt geladen...</div>
             <button class="btn btn-secondary" onclick="checkDatabaseStatus()">🔄 Status Controleren</button>
         </div>
+
+        <div class="section">
+            <h2>📈 MVP-008: Logging & Monitoring Dashboard</h2>
+            <div class="form-group">
+                <button class="btn" onclick="loadLoggingMetrics()">📊 Laad Logging Metrics</button>
+                <button class="btn btn-secondary" onclick="loadMonitoringDashboard()">📈 Laad Monitoring Dashboard</button>
+                <button class="btn btn-secondary" onclick="testLoggingEndpoints()">🧪 Test Endpoints</button>
+            </div>
+            
+            <div id="loggingResults" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; display: none;">
+                <h3>📊 Logging Metrics</h3>
+                <div id="loggingData"></div>
+            </div>
+            
+            <div id="monitoringResults" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; display: none;">
+                <h3>📈 Monitoring Dashboard</h3>
+                <div id="monitoringData"></div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -340,8 +387,14 @@
                 
                 const stats = await response.json();
                 
+                // Update main stats
                 document.getElementById('totalDocuments').textContent = stats.totalDocuments || 0;
                 document.getElementById('totalChunks').textContent = stats.totalChunks || 0;
+                
+                // Update quick status
+                document.getElementById('quickDocs').textContent = stats.totalDocuments || 0;
+                document.getElementById('quickChunks').textContent = stats.totalChunks || 0;
+                document.getElementById('quickStatus').textContent = '✅';
                 
                 if (stats.lastUpdated) {
                     const date = new Date(stats.lastUpdated);
@@ -355,6 +408,11 @@
                 document.getElementById('totalDocuments').textContent = 'Error';
                 document.getElementById('totalChunks').textContent = 'Error';
                 document.getElementById('lastUpdated').textContent = 'Error';
+                
+                // Update quick status with error
+                document.getElementById('quickDocs').textContent = '❌';
+                document.getElementById('quickChunks').textContent = '❌';
+                document.getElementById('quickStatus').textContent = '❌';
             }
         }
 
@@ -485,6 +543,137 @@
             } catch (error) {
                 console.error('Error checking database status:', error);
                 statusDiv.innerHTML = `<div class="error">Database status controleren mislukt: ${error.message}</div>`;
+            }
+        }
+
+        // MVP-008: Logging & Monitoring Functions
+        async function loadLoggingMetrics() {
+            const resultsDiv = document.getElementById('loggingResults');
+            const dataDiv = document.getElementById('loggingData');
+            
+            resultsDiv.style.display = 'block';
+            dataDiv.innerHTML = '<div class="loading">Logging metrics worden geladen...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:3000/logging/metrics', {
+                    headers: {
+                        'X-Tenant-ID': currentTenant
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                dataDiv.innerHTML = `
+                    <div class="success">
+                        <strong>📊 Logging Metrics voor ${currentTenant}:</strong><br><br>
+                        <strong>Totaal Logs:</strong> ${data.metrics.totalLogs}<br>
+                        <strong>Error Count:</strong> ${data.metrics.errorCount}<br>
+                        <strong>Average Latency:</strong> ${data.metrics.averageLatency}ms<br>
+                        <strong>Handover Count:</strong> ${data.metrics.handoverCount}<br>
+                        <strong>Last Updated:</strong> ${new Date(data.metrics.lastUpdated).toLocaleString('nl-NL')}<br>
+                        <strong>Timestamp:</strong> ${new Date(data.timestamp).toLocaleString('nl-NL')}
+                    </div>
+                `;
+                
+                // Update stats grid
+                document.getElementById('totalLogs').textContent = data.metrics.totalLogs;
+                
+            } catch (error) {
+                console.error('Error loading logging metrics:', error);
+                dataDiv.innerHTML = `<div class="error">Logging metrics laden mislukt: ${error.message}</div>`;
+            }
+        }
+
+        async function loadMonitoringDashboard() {
+            const resultsDiv = document.getElementById('monitoringResults');
+            const dataDiv = document.getElementById('monitoringData');
+            
+            resultsDiv.style.display = 'block';
+            dataDiv.innerHTML = '<div class="loading">Monitoring dashboard wordt geladen...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:3000/monitoring/dashboard', {
+                    headers: {
+                        'X-Tenant-ID': currentTenant
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                dataDiv.innerHTML = `
+                    <div class="success">
+                        <strong>📈 Monitoring Dashboard voor ${currentTenant}:</strong><br><br>
+                        <strong>Total Conversations:</strong> ${data.metrics.totalConversations}<br>
+                        <strong>AI Latency P50:</strong> ${data.metrics.aiLatencyP50}ms<br>
+                        <strong>AI Latency P95:</strong> ${data.metrics.aiLatencyP95}ms<br>
+                        <strong>Handover Ratio:</strong> ${(data.metrics.handoverRatio * 100).toFixed(1)}%<br>
+                        <strong>Handover Count:</strong> ${data.metrics.handoverCount}<br>
+                        <strong>Error Rate:</strong> ${(data.metrics.errorRate * 100).toFixed(1)}%<br>
+                        <strong>Last Updated:</strong> ${new Date(data.metrics.lastUpdated).toLocaleString('nl-NL')}<br>
+                        <strong>Timestamp:</strong> ${new Date(data.timestamp).toLocaleString('nl-NL')}
+                    </div>
+                `;
+                
+                // Update stats grid
+                document.getElementById('aiLatency').textContent = data.metrics.aiLatencyP50;
+                document.getElementById('handoverRatio').textContent = (data.metrics.handoverRatio * 100).toFixed(1) + '%';
+                
+            } catch (error) {
+                console.error('Error loading monitoring dashboard:', error);
+                dataDiv.innerHTML = `<div class="error">Monitoring dashboard laden mislukt: ${error.message}</div>`;
+            }
+        }
+
+        async function testLoggingEndpoints() {
+            const resultsDiv = document.getElementById('loggingResults');
+            const dataDiv = document.getElementById('loggingData');
+            
+            resultsDiv.style.display = 'block';
+            dataDiv.innerHTML = '<div class="loading">Endpoints worden getest...</div>';
+            
+            try {
+                // Test conversation start logging
+                const response = await fetch('http://localhost:3000/logging/conversation/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Tenant-ID': currentTenant
+                    },
+                    body: JSON.stringify({
+                        tenantId: currentTenant,
+                        conversationId: 'test-' + Date.now()
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                dataDiv.innerHTML = `
+                    <div class="success">
+                        <strong>🧪 Endpoint Test Geslaagd:</strong><br><br>
+                        <strong>Log ID:</strong> ${data.logEntry.logId}<br>
+                        <strong>Event:</strong> ${data.logEntry.event}<br>
+                        <strong>Status:</strong> ${data.logEntry.status}<br>
+                        <strong>Tenant ID:</strong> ${data.logEntry.tenantId}<br>
+                        <strong>Conversation ID:</strong> ${data.logEntry.conversationId}<br>
+                        <strong>Timestamp:</strong> ${new Date(data.logEntry.timestamp).toLocaleString('nl-NL')}
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Error testing endpoints:', error);
+                dataDiv.innerHTML = `<div class="error">Endpoint test mislukt: ${error.message}</div>`;
             }
         }
 

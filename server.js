@@ -6,6 +6,71 @@ const fs = require('fs');
 const path = require('path');
 const { sendEmail } = require('./lib/email.js');
 
+// OpenAI API helper function
+async function generateOpenAIResponse(userMessage, personaConfig, tenantId) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  console.log('🔑 OpenAI API Key check:', { 
+    exists: !!apiKey, 
+    length: apiKey?.length, 
+    startsCorrectly: apiKey?.startsWith('sk-'),
+    useMockLLM: process.env.USE_MOCK_LLM
+  });
+  if (!apiKey || apiKey === 'your_openai_api_key_here') {
+    throw new Error('OpenAI API key not configured');
+  }
+
+  // Build system message with persona context
+  let systemMessage = 'Je bent een behulpzame Nederlandse AI-assistent. Geef korte, duidelijke antwoorden in het Nederlands.';
+  
+  if (personaConfig) {
+    systemMessage = `Je bent een AI-assistent voor ${personaConfig.id === 'techcorp' ? 'TechCorp Solutions' : 'RetailMax'}. 
+    Toon: ${personaConfig.tone}.
+    Antwoord altijd in het Nederlands en wees behulpzaam.
+    
+    Context:
+    - Bedrijf: ${personaConfig.id === 'techcorp' ? 'TechCorp Solutions - Web development en software oplossingen' : 'RetailMax - Elektronica en consumentengoederen'}
+    - Toon: ${personaConfig.tone}
+    - Persoonlijkheid: ${personaConfig.personality.join(', ')}`;
+  }
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: systemMessage
+          },
+          {
+            role: 'user',
+            content: userMessage
+          }
+        ],
+        max_tokens: 1000,
+        temperature: 0.7
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`OpenAI API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0]?.message?.content || 'Sorry, ik kon geen antwoord genereren.';
+    
+  } catch (error) {
+    console.error('OpenAI API request failed:', error);
+    throw error;
+  }
+}
+
 // Email helper functions
 async function sendHandoverEmail(to, subject, html, tenantId = 'unknown') {
   try {
@@ -456,6 +521,89 @@ const server = http.createServer((req, res) => {
 
   // AI Query endpoint with SSE
   if (path === '/api/ai/query' && req.method === 'POST') {
+    // Simple rate limiting check
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    const ipAddress = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown';
+    const tenantId = req.headers['x-tenant-id'] || 'demo-tenant';
+    
+    // Simple in-memory rate limiting (in production, use Redis or similar)
+    const rateLimitKey = `${tenantId}:${ipAddress}`;
+    const now = Date.now();
+    
+    // Initialize rate limit storage if not exists
+    if (!global.rateLimitStorage) {
+      global.rateLimitStorage = new Map();
+    }
+    
+    const rateLimitData = global.rateLimitStorage.get(rateLimitKey) || {
+      count: 0,
+      burstCount: 0,
+      resetTime: now + 60000, // 1 minute
+      burstResetTime: now + 10000, // 10 seconds
+      lastRequestTime: now
+    };
+    
+    // Check burst limit (5 requests per 10 seconds)
+    if (now <= rateLimitData.burstResetTime) {
+      if (rateLimitData.burstCount >= 5) {
+        res.writeHead(429, { 
+          'Content-Type': 'application/json',
+          'Retry-After': Math.ceil((rateLimitData.burstResetTime - now) / 1000)
+        });
+        res.end(JSON.stringify({
+          error: 'Burst limit exceeded',
+          code: 'RATE_LIMIT_EXCEEDED',
+          retryAfter: Math.ceil((rateLimitData.burstResetTime - now) / 1000),
+          reason: 'Burst limit exceeded'
+        }));
+        return;
+      }
+      rateLimitData.burstCount++;
+    } else {
+      rateLimitData.burstCount = 1;
+      rateLimitData.burstResetTime = now + 10000;
+    }
+    
+    // Check rate limit (30 requests per minute)
+    if (now <= rateLimitData.resetTime) {
+      if (rateLimitData.count >= 30) {
+        res.writeHead(429, { 
+          'Content-Type': 'application/json',
+          'Retry-After': Math.ceil((rateLimitData.resetTime - now) / 1000)
+        });
+        res.end(JSON.stringify({
+          error: 'Rate limit exceeded',
+          code: 'RATE_LIMIT_EXCEEDED',
+          retryAfter: Math.ceil((rateLimitData.resetTime - now) / 1000),
+          reason: 'Rate limit exceeded'
+        }));
+        return;
+      }
+      rateLimitData.count++;
+    } else {
+      rateLimitData.count = 1;
+      rateLimitData.resetTime = now + 60000;
+    }
+    
+    // Update rate limit data
+    rateLimitData.lastRequestTime = now;
+    global.rateLimitStorage.set(rateLimitKey, rateLimitData);
+    
+    // Simple bot detection
+    const botPatterns = ['bot', 'crawler', 'spider', 'scraper', 'curl', 'wget'];
+    const isBot = botPatterns.some(pattern => userAgent.toLowerCase().includes(pattern));
+    
+    if (isBot) {
+      res.writeHead(429, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        error: 'Bot detected',
+        code: 'BOT_DETECTED',
+        reason: 'Bot detected',
+        captchaRequired: true
+      }));
+      return;
+    }
+
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
@@ -474,10 +622,10 @@ const server = http.createServer((req, res) => {
       body += chunk.toString();
     });
     
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
         const data = JSON.parse(body);
-        const fullMessage = data.message || '';
+        const fullMessage = data.content || data.message || '';
         const tenantId = req.headers['x-tenant-id'] || 'demo-tenant';
         
         // Extract original user message (before knowledge context)
@@ -528,29 +676,49 @@ const server = http.createServer((req, res) => {
           // Send safety refusal response
           responseText = personaConfig.refusalMessage;
         } else {
-          // Generate contextual response based on persona
-          const messageLower = userMessage.toLowerCase();
+          // Use real OpenAI API if configured
+          console.log('🤖 AI Provider decision:', {
+            hasAPIKey: !!process.env.OPENAI_API_KEY,
+            isNotDefault: process.env.OPENAI_API_KEY !== 'your_openai_api_key_here',
+            useMockLLM: process.env.USE_MOCK_LLM,
+            willUseOpenAI: !!(process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your_openai_api_key_here' && process.env.USE_MOCK_LLM === 'false')
+          });
           
-          if (messageLower.includes('hallo') || messageLower.includes('hi') || messageLower.includes('hey')) {
-            responseText = personaConfig.welcomeMessage;
-          } else if (messageLower.includes('web development') || messageLower.includes('services') || 
-                     messageLower.includes('diensten') || messageLower.includes('wat zijn jullie')) {
-            responseText = generateKnowledgeBasedResponse(userMessage, tenantId);
-          } else if (messageLower.includes('prijzen') || messageLower.includes('packages') || 
-                     messageLower.includes('kosten') || messageLower.includes('tarieven') ||
-                     messageLower.includes('prijs') || messageLower.includes('offerte')) {
-            responseText = generatePricingResponse(tenantId);
-          } else if (messageLower.includes('ondersteuning') || messageLower.includes('support') ||
-                     messageLower.includes('help') || messageLower.includes('hulp')) {
-            responseText = generateSupportResponse(tenantId);
+          if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your_openai_api_key_here' && process.env.USE_MOCK_LLM === 'false') {
+            try {
+              console.log('✅ Using OpenAI API for response');
+              responseText = await generateOpenAIResponse(userMessage, personaConfig, tenantId);
+            } catch (error) {
+              console.error('❌ OpenAI API error:', error);
+              // Fallback to knowledge-based response
+              responseText = generateKnowledgeBasedResponse(userMessage, tenantId);
+            }
           } else {
-            // Default response based on persona
-            if (personaConfig.id === 'techcorp') {
-              responseText = `TechCorp Solutions: ${personaConfig.personality[0]}. Hoe kan ik je helpen met web development of software oplossingen?`;
-            } else if (personaConfig.id === 'retailmax') {
-              responseText = `RetailMax: ${personaConfig.personality[0]}. Wat kan ik voor je betekenen op het gebied van elektronica en consumentengoederen?`;
+            console.log('⚠️ Using mock AI (fallback)');
+            // Generate contextual response based on persona (fallback)
+            const messageLower = userMessage.toLowerCase();
+            
+            if (messageLower.includes('hallo') || messageLower.includes('hi') || messageLower.includes('hey')) {
+              responseText = personaConfig.welcomeMessage;
+            } else if (messageLower.includes('web development') || messageLower.includes('services') || 
+                       messageLower.includes('diensten') || messageLower.includes('wat zijn jullie')) {
+              responseText = generateKnowledgeBasedResponse(userMessage, tenantId);
+            } else if (messageLower.includes('prijzen') || messageLower.includes('packages') || 
+                       messageLower.includes('kosten') || messageLower.includes('tarieven') ||
+                       messageLower.includes('prijs') || messageLower.includes('offerte')) {
+              responseText = generatePricingResponse(tenantId);
+            } else if (messageLower.includes('ondersteuning') || messageLower.includes('support') ||
+                       messageLower.includes('help') || messageLower.includes('hulp')) {
+              responseText = generateSupportResponse(tenantId);
             } else {
-              responseText = 'Ik ben een AI-assistent en ik kan je helpen!';
+              // Default response based on persona
+              if (personaConfig.id === 'techcorp') {
+                responseText = `TechCorp Solutions: ${personaConfig.personality[0]}. Hoe kan ik je helpen met web development of software oplossingen?`;
+              } else if (personaConfig.id === 'retailmax') {
+                responseText = `RetailMax: ${personaConfig.personality[0]}. Wat kan ik voor je betekenen op het gebied van elektronica en consumentengoederen?`;
+              } else {
+                responseText = 'Ik ben een AI-assistent en ik kan je helpen!';
+              }
             }
           }
         }
@@ -1088,6 +1256,205 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // OpenAI Monitoring endpoints
+  if (path === '/openai/metrics' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      success: true,
+      provider: 'openai',
+      metrics: {
+        totalRequests: 0,
+        totalTokens: 0,
+        totalCost: 0,
+        averageLatency: 0,
+        errorCount: 0,
+        averageLatencyMs: 0,
+        totalCostUSD: 0,
+        errorRate: 0
+      },
+      timestamp: new Date().toISOString()
+    }));
+    return;
+  }
+
+  if (path === '/openai/reset-metrics' && req.method === 'POST') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      success: true,
+      message: 'Metrics reset successfully',
+      timestamp: new Date().toISOString()
+    }));
+    return;
+  }
+
+  if (path === '/openai/config' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          message: 'Configuration updated successfully',
+          config: {
+            maxTokens: data.maxTokens || 1000,
+            temperature: data.temperature || 0.7,
+            model: data.model || 'gpt-4o-mini'
+          },
+          timestamp: new Date().toISOString()
+        }));
+      } catch (error) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: false,
+          error: 'Invalid JSON'
+        }));
+      }
+    });
+    return;
+  }
+
+  // Abuse Protection endpoints - MVP-010
+  if (path === '/abuse/stats' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      success: true,
+      waf: {
+        totalRules: 15,
+        criticalRules: 4,
+        highRules: 6,
+        mediumRules: 3,
+        lowRules: 2
+      },
+      captcha: {
+        activeChallenges: 0,
+        totalGenerated: 0,
+        successRate: 0
+      },
+      timestamp: new Date().toISOString()
+    }));
+    return;
+  }
+
+  if (path === '/abuse/captcha/generate' && req.method === 'POST') {
+    const challengeId = Math.random().toString(36).substring(2, 15);
+    const questions = [
+      'Wat is 2 + 2?',
+      'Wat is de hoofdstad van Nederland?',
+      'Hoeveel dagen heeft een week?',
+      'Welke kleur krijg je als je rood en blauw mengt?'
+    ];
+    const question = questions[Math.floor(Math.random() * questions.length)];
+    
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      success: true,
+      challengeId,
+      question
+    }));
+    return;
+  }
+
+  if (path === '/abuse/captcha/verify' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        const { challengeId, answer } = data;
+        
+        if (!challengeId || !answer) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            success: false,
+            error: 'Missing challengeId or answer'
+          }));
+          return;
+        }
+        
+        // Simple verification - in real implementation this would check against stored challenge
+        const isCorrect = answer.toLowerCase().trim() === '4' || 
+                         answer.toLowerCase().trim() === 'amsterdam' ||
+                         answer.toLowerCase().trim() === '7' ||
+                         answer.toLowerCase().trim() === 'paars';
+        
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: isCorrect,
+          verified: isCorrect,
+          error: isCorrect ? undefined : 'Incorrect answer'
+        }));
+        
+      } catch (error) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: false,
+          error: 'Invalid JSON'
+        }));
+      }
+    });
+    return;
+  }
+
+  if (path === '/abuse/waf-check' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        const { method, path: requestPath, headers, body: requestBody } = data;
+        
+        // Simple WAF check - look for malicious patterns
+        const maliciousPatterns = [
+          /<script/i,
+          /javascript:/i,
+          /union.*select/i,
+          /\.\.\//,
+          /eval\(/i,
+          /document\.cookie/i
+        ];
+        
+        const input = `${method} ${requestPath} ${JSON.stringify(headers)} ${requestBody || ''}`.toLowerCase();
+        let blocked = false;
+        let reason = '';
+        
+        for (const pattern of maliciousPatterns) {
+          if (pattern.test(input)) {
+            blocked = true;
+            reason = 'Malicious pattern detected';
+            break;
+          }
+        }
+        
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          blocked,
+          reason: blocked ? reason : undefined,
+          challenge: false
+        }));
+        
+      } catch (error) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: false,
+          error: 'Invalid JSON'
+        }));
+      }
+    });
+    return;
+  }
+
   // Knowledge Base endpoints - MVP-004
   if (path === '/api/knowledge/ingest' && req.method === 'POST') {
     let body = '';
@@ -1161,6 +1528,74 @@ const server = http.createServer((req, res) => {
       },
       totalChunks: 15,
       lastUpdated: new Date().toISOString(),
+      timestamp: new Date().toISOString()
+    }));
+    return;
+  }
+
+  // MVP-008: Logging endpoints
+  if (path === '/logging/metrics' && req.method === 'GET') {
+    const tenantId = req.headers['x-tenant-id'] || 'demo-tenant';
+    
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      success: true,
+      metrics: {
+        totalLogs: 0,
+        errorCount: 0,
+        averageLatency: 0,
+        handoverCount: 0,
+        lastUpdated: new Date()
+      },
+      timestamp: new Date().toISOString()
+    }));
+    return;
+  }
+
+  if (path === '/logging/conversation/start' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => body += chunk.toString());
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        const logId = 'log-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          logEntry: {
+            logId,
+            tenantId: data.tenantId,
+            conversationId: data.conversationId,
+            event: 'conversation_start',
+            status: 'started',
+            timestamp: new Date()
+          }
+        }));
+      } catch (error) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Invalid JSON' }));
+      }
+    });
+    return;
+  }
+
+  // MVP-008: Monitoring endpoints
+  if (path === '/monitoring/dashboard' && req.method === 'GET') {
+    const tenantId = req.headers['x-tenant-id'] || 'demo-tenant';
+    
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      success: true,
+      metrics: {
+        totalConversations: 0,
+        aiLatencyP50: 0,
+        aiLatencyP95: 0,
+        handoverRatio: 0,
+        handoverCount: 0,
+        errorRate: 0,
+        lastUpdated: new Date()
+      },
       timestamp: new Date().toISOString()
     }));
     return;

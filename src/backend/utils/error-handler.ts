@@ -14,11 +14,16 @@ export class ErrorHandler {
     });
   }
 
-  static createRateLimitResponse(retryAfter?: number): Response {
+  static createRateLimitResponse(
+    retryAfter?: number, 
+    reason?: string, 
+    captchaRequired?: boolean
+  ): Response {
     const errorResponse: ErrorResponse = {
-      error: 'Rate limit exceeded',
+      error: reason || 'Rate limit exceeded',
       code: 'RATE_LIMIT_EXCEEDED',
-      retryAfter
+      retryAfter,
+      captchaRequired
     };
 
     const headers = this.getCORSHeaders();

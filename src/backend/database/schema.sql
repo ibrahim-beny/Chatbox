@@ -43,11 +43,164 @@ CREATE TABLE IF NOT EXISTS document_chunks (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Logging & Monitoring tabellen voor MVP-008
+CREATE TABLE IF NOT EXISTS conversation_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  log_id VARCHAR NOT NULL UNIQUE,
+  tenant_id VARCHAR REFERENCES tenants(id) ON DELETE CASCADE,
+  conversation_id VARCHAR NOT NULL,
+  event VARCHAR NOT NULL,
+  status VARCHAR,
+  message TEXT,
+  latency_ms INTEGER,
+  confidence FLOAT,
+  error TEXT,
+  endpoint VARCHAR,
+  timestamp TIMESTAMP NOT NULL,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ai_metrics (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tenant_id VARCHAR REFERENCES tenants(id) ON DELETE CASCADE,
+  conversation_id VARCHAR NOT NULL,
+  latency_ms INTEGER NOT NULL,
+  confidence FLOAT NOT NULL,
+  timestamp TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS handover_metrics (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tenant_id VARCHAR REFERENCES tenants(id) ON DELETE CASCADE,
+  conversation_id VARCHAR NOT NULL,
+  reason VARCHAR NOT NULL,
+  timestamp TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Indexes voor performance
 CREATE INDEX IF NOT EXISTS idx_documents_tenant_id ON documents(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(status);
 CREATE INDEX IF NOT EXISTS idx_document_chunks_document_id ON document_chunks(document_id);
 CREATE INDEX IF NOT EXISTS idx_document_chunks_content ON document_chunks USING gin(to_tsvector('dutch', content));
+
+-- GDPR & Privacy tabellen voor MVP-009
+CREATE TABLE IF NOT EXISTS gdpr_processing_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  data_id VARCHAR NOT NULL UNIQUE,
+  user_id VARCHAR NOT NULL,
+  data_type VARCHAR NOT NULL,
+  processing_purpose VARCHAR NOT NULL,
+  consent_given BOOLEAN DEFAULT false,
+  encrypted BOOLEAN DEFAULT true,
+  retention_period INTEGER DEFAULT 30,
+  timestamp TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS gdpr_exports (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  export_id VARCHAR NOT NULL UNIQUE,
+  user_id VARCHAR NOT NULL,
+  request_id VARCHAR NOT NULL,
+  export_data JSONB NOT NULL,
+  expiry_date TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS gdpr_deletions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  deletion_id VARCHAR NOT NULL UNIQUE,
+  user_id VARCHAR NOT NULL,
+  request_id VARCHAR NOT NULL,
+  deleted_data_types JSONB NOT NULL,
+  deletion_date TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS gdpr_audit_trail (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  action_id VARCHAR NOT NULL UNIQUE,
+  action VARCHAR NOT NULL,
+  user_id VARCHAR NOT NULL,
+  timestamp TIMESTAMP NOT NULL,
+  details JSONB DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS privacy_settings (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tenant_id VARCHAR NOT NULL UNIQUE,
+  data_retention INTEGER DEFAULT 30,
+  pii_redaction BOOLEAN DEFAULT true,
+  encryption_enabled BOOLEAN DEFAULT true,
+  audit_logging BOOLEAN DEFAULT true,
+  consent_required BOOLEAN DEFAULT true,
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS privacy_audit_log (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  action_id VARCHAR NOT NULL UNIQUE,
+  action VARCHAR NOT NULL,
+  user_id VARCHAR NOT NULL,
+  details JSONB DEFAULT '{}',
+  timestamp TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS consent_records (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  consent_id VARCHAR NOT NULL UNIQUE,
+  user_id VARCHAR NOT NULL,
+  consent_type VARCHAR NOT NULL,
+  consent_given BOOLEAN DEFAULT false,
+  timestamp TIMESTAMP NOT NULL,
+  ip_address VARCHAR,
+  user_agent TEXT,
+  tenant_id VARCHAR NOT NULL,
+  withdrawn_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS consent_audit_trail (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  action_id VARCHAR NOT NULL UNIQUE,
+  action VARCHAR NOT NULL,
+  user_id VARCHAR NOT NULL,
+  details JSONB DEFAULT '{}',
+  timestamp TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Logging & Monitoring indexes
+CREATE INDEX IF NOT EXISTS idx_conversation_logs_tenant_id ON conversation_logs(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_logs_conversation_id ON conversation_logs(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_logs_timestamp ON conversation_logs(timestamp);
+CREATE INDEX IF NOT EXISTS idx_conversation_logs_event ON conversation_logs(event);
+CREATE INDEX IF NOT EXISTS idx_ai_metrics_tenant_id ON ai_metrics(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_ai_metrics_timestamp ON ai_metrics(timestamp);
+CREATE INDEX IF NOT EXISTS idx_handover_metrics_tenant_id ON handover_metrics(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_handover_metrics_timestamp ON handover_metrics(timestamp);
+
+-- GDPR & Privacy indexes
+CREATE INDEX IF NOT EXISTS idx_gdpr_processing_logs_user_id ON gdpr_processing_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_gdpr_processing_logs_timestamp ON gdpr_processing_logs(timestamp);
+CREATE INDEX IF NOT EXISTS idx_gdpr_exports_user_id ON gdpr_exports(user_id);
+CREATE INDEX IF NOT EXISTS idx_gdpr_exports_expiry_date ON gdpr_exports(expiry_date);
+CREATE INDEX IF NOT EXISTS idx_gdpr_deletions_user_id ON gdpr_deletions(user_id);
+CREATE INDEX IF NOT EXISTS idx_gdpr_audit_trail_user_id ON gdpr_audit_trail(user_id);
+CREATE INDEX IF NOT EXISTS idx_gdpr_audit_trail_timestamp ON gdpr_audit_trail(timestamp);
+CREATE INDEX IF NOT EXISTS idx_privacy_settings_tenant_id ON privacy_settings(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_privacy_audit_log_user_id ON privacy_audit_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_privacy_audit_log_timestamp ON privacy_audit_log(timestamp);
+CREATE INDEX IF NOT EXISTS idx_consent_records_user_id ON consent_records(user_id);
+CREATE INDEX IF NOT EXISTS idx_consent_records_tenant_id ON consent_records(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_consent_records_timestamp ON consent_records(timestamp);
+CREATE INDEX IF NOT EXISTS idx_consent_audit_trail_user_id ON consent_audit_trail(user_id);
+CREATE INDEX IF NOT EXISTS idx_consent_audit_trail_timestamp ON consent_audit_trail(timestamp);
 
 -- Demo data insertie
 INSERT INTO tenants (id, name, industry, branding, ai_provider, rate_limit) VALUES
