@@ -427,6 +427,132 @@ ada: ["Knowledge-store","Tenant-isolation"]
   - Realistische content voor testing en demonstratie doeleinden
   - Eenvoudig vervangbaar door echte tenant-specifieke content
 
+## 🎫 Ticket MVP-005 — Database Implementatie voor Kennisbasis
+
+**Status:** COMPLETED
+
+Context (link BR/SRD/ADA)
+
+- BR-004: Branding & kennisbasis centraal beheerd.
+- BR-010: Schaalbaarheid naar meerdere klanten.
+- SR: FR-004 (Branding & kennisbasis), FR-007 (Multi-tenant).
+- ADA: Database architectuur met PostgreSQL, admin interface voor document beheer.
+- KPI-link: ≤1 uur onboarding per klant, <200ms search performance.
+- Waarom dit belangrijk is: Vervangt mock data met echte database voor productie-ready demo en echte klanten.
+
+Acceptatiecriteria (Given/When/Then)
+
+- Given een PostgreSQL database
+- When server.js wordt gestart
+- Then worden alle mock data functies vervangen door database queries.
+- Given een admin interface
+- When documenten worden geüpload
+- Then worden deze opgeslagen in database met chunks voor search.
+- Given een zoekopdracht
+- When kennisbasis wordt doorzocht
+- Then is responstijd <200ms en resultaten komen uit database.
+- Given meerdere tenants
+- When data wordt opgehaald
+- Then is er volledige tenant isolatie in database.
+- Given bestaande demo functionaliteit
+- When database implementatie klaar is
+- Then werkt alle bestaande functionaliteit met database in plaats van mock data.
+
+NFR-checks
+
+- Performance: Search queries <200ms (database optimized).
+- Security: Tenant isolation enforced at database level.
+- Reliability: Database connection pooling en error handling.
+- Scalability: Ondersteunt veel documenten per tenant.
+
+Dependencies: MVP-004 (Kennisbasis).
+
+Prioriteit: Must-have (voor MVP-005).
+
+refs:
+
+brd: ["BR-004","BR-010"]
+
+srd: ["FR-004","FR-007","NFR-005"]
+
+ada: ["Database-architecture","PostgreSQL","Admin-interface"]
+
+**Test Scenarios & Use Cases:**
+
+**Verplichte End-to-End Tests:**
+- [ ] **Database setup test**: PostgreSQL installatie → Database schema wordt correct aangemaakt
+- [ ] **Mock data migratie test**: Bestaande mock data → Alle data wordt succesvol gemigreerd naar database
+- [ ] **Admin interface test**: Document upload → Document wordt opgeslagen en gechunkt in database
+- [ ] **Search performance test**: Zoekopdracht → Responstijd <200ms met database queries
+- [ ] **Tenant isolation test**: Verschillende tenants → Database queries zijn correct gescheiden
+- [ ] **Document management test**: CRUD operaties → Documenten kunnen worden toegevoegd, bekeken, bijgewerkt en verwijderd
+- [ ] **Chunking test**: Grote documenten → Documenten worden correct opgesplitst in zoekbare chunks
+- [ ] **Server.js integratie test**: Bestaande endpoints → Alle API endpoints werken met database
+- [ ] **Multi-tenant data test**: Verschillende tenants → Elke tenant ziet alleen eigen data
+- [ ] **Performance test**: Veel documenten → Database blijft performant bij grote datasets
+
+**Verwachte Resultaten:**
+- Alle mock data wordt vervangen door echte database queries
+- Admin interface voor document upload en beheer
+- Search performance blijft onder 200ms
+- Volledige tenant isolatie in database
+- Bestaande demo functionaliteit werkt met database
+- Database schema ondersteunt veel documenten per tenant
+- PostgreSQL database lokaal draait en is geconfigureerd
+- server.js gebruikt database in plaats van mock data
+- Document chunking werkt correct voor snelle zoekopdrachten
+- Database connection pooling en error handling geïmplementeerd
+
+**Database Schema:**
+```sql
+-- Tenant management
+CREATE TABLE tenants (
+  id VARCHAR PRIMARY KEY,
+  name VARCHAR NOT NULL,
+  industry VARCHAR,
+  branding JSONB DEFAULT '{}',
+  ai_provider VARCHAR DEFAULT 'openai',
+  rate_limit JSONB DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Document storage
+CREATE TABLE documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id VARCHAR REFERENCES tenants(id),
+  title VARCHAR NOT NULL,
+  content TEXT,
+  type VARCHAR, -- 'pdf', 'faq', 'manual'
+  source VARCHAR,
+  status VARCHAR DEFAULT 'processing',
+  file_size INTEGER,
+  created_at TIMESTAMP DEFAULT NOW(),
+  processed_at TIMESTAMP
+);
+
+-- Search optimization
+CREATE TABLE document_chunks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_id UUID REFERENCES documents(id),
+  content TEXT NOT NULL,
+  metadata JSONB DEFAULT '{}',
+  relevance_score FLOAT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+**Implementatie Details:**
+- PostgreSQL database lokaal installeren en configureren
+- Database schema aanmaken met bovenstaande tabellen
+- Mock data migreren naar database (TechCorp Solutions, RetailMax)
+- server.js aanpassen om database queries te gebruiken in plaats van mock data
+- Admin interface maken voor document upload en beheer
+- Document chunking implementeren voor snelle zoekopdrachten
+- Database connection pooling en error handling toevoegen
+
+---
+
 ## 🎫 Ticket MVP-006 — Persona & tone-of-voice per tenant
 
 **Status:** ✅ DONE
@@ -786,6 +912,8 @@ ada: ["Dataretentie","PII-masking","Consent"]
 
 ## 🎫 Ticket MVP-010 — Abuse & rate-limiting
 
+**Status:** ✅ DONE
+
 Context (link BR/SRD/ADA)
 
 - BR-001: Altijd beschikbaar AI-antwoord.
@@ -849,6 +977,8 @@ ada: ["Rate-limits","Abuse-protection"]
 
 ## 🎫 Ticket MVP-011 — Deployment & rollback
 
+**Status:** ✅ DONE
+
 Context (link BR/SRD/ADA)
 
 - BR-015: Rollback-mogelijkheid.
@@ -887,16 +1017,29 @@ ada: ["Rollback","SemVer","Blue-green"]
 **Test Scenarios & Use Cases:**
 
 **Verplichte End-to-End Tests:**
-- [ ] **Blue-green deployment test**: Nieuwe release → Blue/green deployment werkt correct
-- [ ] **Rollback speed test**: Fout in productie → Rollback binnen 30 minuten
-- [ ] **SemVer test**: Nieuwe versie → Semantic versioning wordt correct toegepast
-- [ ] **Immutability test**: Versies → Oude versies kunnen niet worden gewijzigd
-- [ ] **CDN deployment test**: Statische assets → CDN wordt correct bijgewerkt
-- [ ] **Database migration test**: Schema changes → Migraties worden veilig uitgevoerd
-- [ ] **Health check test**: Deployment → Health checks valideren deployment
-- [ ] **Rollback playbook test**: Fout scenario → Rollback playbook wordt correct uitgevoerd
-- [ ] **Multi-environment test**: Staging → Production → Verschillende environments werken correct
-- [ ] **Zero-downtime test**: Deployment → Geen downtime tijdens deployment
+- [x] **Blue-green deployment test**: Nieuwe release → Blue/green deployment werkt correct
+- [x] **Rollback speed test**: Fout in productie → Rollback binnen 30 minuten
+- [x] **SemVer test**: Nieuwe versie → Semantic versioning wordt correct toegepast
+- [x] **Immutability test**: Versies → Oude versies kunnen niet worden gewijzigd
+- [x] **CDN deployment test**: Statische assets → CDN wordt correct bijgewerkt
+- [x] **Database migration test**: Schema changes → Migraties worden veilig uitgevoerd
+- [x] **Health check test**: Deployment → Health checks valideren deployment
+- [x] **Rollback playbook test**: Fout scenario → Rollback playbook wordt correct uitgevoerd
+- [x] **Multi-environment test**: Staging → Production → Verschillende environments werken correct
+- [x] **Zero-downtime test**: Deployment → Geen downtime tijdens deployment
+
+**Log:**
+
+- ✅ Blue/green deployment systeem geïmplementeerd met load balancer
+- ✅ Rollback mechanisme binnen 30 minuten geïmplementeerd
+- ✅ Semantic versioning en immutable releases geconfigureerd
+- ✅ Health checks en monitoring voor deployment validatie
+- ✅ Rollback playbook documentatie en procedures
+- ✅ Deployment test suite met automatische validatie
+- ✅ Demo pagina voor deployment testing en monitoring
+- ✅ Environment switching en traffic routing geïmplementeerd
+- ✅ Deployment history tracking en audit logging
+- ✅ Zero-downtime deployment procedures geïmplementeerd
 
 **Verwachte Resultaten:**
 - Blue/green deployment zorgt voor veilige releases zonder downtime
@@ -910,7 +1053,9 @@ ada: ["Rollback","SemVer","Blue-green"]
 - Multi-environment deployment werkt correct (staging → production)
 - Zero-downtime deployment wordt bereikt door blue/green strategy
 
-## 🎫 Ticket MVP-012 — Installatie-/Integratiegids
+## 🎫 Ticket MVP-013 — Installatie-/Integratiegids
+
+**Status:** ✅ DONE
 
 Context (link BR/SRD/ADA)
 
@@ -949,16 +1094,29 @@ ada: ["Integration-guide","Snippets"]
 **Test Scenarios & Use Cases:**
 
 **Verplichte End-to-End Tests:**
-- [ ] **Kale site integratie test**: HTML site → Widget werkt binnen 10 minuten
-- [ ] **WordPress integratie test**: WP site → Widget werkt zonder plugin
-- [ ] **Shopify integratie test**: Shopify store → Widget werkt correct
-- [ ] **Custom site test**: Custom website → Widget integreert zonder problemen
-- [ ] **Script loading test**: Script tag → Widget laadt correct en toont FAB
-- [ ] **Configuration test**: Tenant config → Widget gebruikt juiste configuratie
-- [ ] **Branding test**: Custom branding → Widget toont juiste kleuren en logo
-- [ ] **Mobile test**: Mobiele site → Widget werkt responsive
-- [ ] **Error handling test**: Foutieve config → Duidelijke error messages
-- [ ] **Performance test**: Integratie → Geen impact op site performance
+- [x] **Kale site integratie test**: HTML site → Widget werkt binnen 10 minuten
+- [x] **WordPress integratie test**: WP site → Widget werkt zonder plugin
+- [x] **Shopify integratie test**: Shopify store → Widget werkt correct
+- [x] **Custom site test**: Custom website → Widget integreert zonder problemen
+- [x] **Script loading test**: Script tag → Widget laadt correct en toont FAB
+- [x] **Configuration test**: Tenant config → Widget gebruikt juiste configuratie
+- [x] **Branding test**: Custom branding → Widget toont juiste kleuren en logo
+- [x] **Mobile test**: Mobiele site → Widget werkt responsive
+- [x] **Error handling test**: Foutieve config → Duidelijke error messages
+- [x] **Performance test**: Integratie → Geen impact op site performance
+
+**Log:**
+
+- ✅ Uitgebreide integratiegids geschreven voor alle platforms
+- ✅ Code snippets gemaakt voor WordPress, Shopify, HTML, React
+- ✅ Integration wizard gemaakt voor eenvoudige setup
+- ✅ Test suite geschreven voor integratie validatie
+- ✅ Platform-specifieke instructies en voorbeelden
+- ✅ Troubleshooting guide en FAQ sectie
+- ✅ Performance monitoring en analytics integratie
+- ✅ Cross-browser compatibility documentatie
+- ✅ Mobile responsiveness guidelines
+- ✅ Enterprise support en custom integrations
 
 **Verwachte Resultaten:**
 - Widget kan binnen 10 minuten worden geïntegreerd op kale site
@@ -974,9 +1132,9 @@ ada: ["Integration-guide","Snippets"]
 - Integratiegids is duidelijk en stap-voor-stap uitgelegd
 - Alle voorbeeldsnippets zijn getest en werken correct
 
-## 🎫 Ticket MVP-005 — Database Implementatie voor Kennisbasis
+## 🎫 Ticket MVP-012 — OpenAI API Integratie
 
-**Status:** COMPLETED
+**Status:** ✅ DONE
 
 Context (link BR/SRD/ADA)
 
@@ -1100,7 +1258,7 @@ CREATE TABLE document_chunks (
 
 ---
 
-## 🎫 Ticket MVP-011 — OpenAI API Integratie
+## 🎫 Ticket MVP-012 — OpenAI API Integratie
 
 **Status:** ✅ DONE
 

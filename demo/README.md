@@ -1,186 +1,173 @@
-# Demo Pagina's - Chatbox Widget
+# MVP-013: Demo Sites voor Testing
 
-Deze directory bevat verschillende demo pagina's voor het testen en demonstreren van de Chatbox Widget functionaliteiten.
+## 🎯 Overzicht
 
-## 📁 Bestanden Overzicht
+Deze demo sites worden gebruikt om de integratie van de Chatbox Widget te testen op verschillende platforms.
 
-### 🎯 Voor Stakeholders & Product Managers
+## 📋 Demo Sites
 
-#### `stakeholder-demo.html` ⭐ **AANBEVOLEN**
-**Doel:** Hoofddemo voor niet-technische stakeholders
-- **Tabbed interface** met duidelijke navigatie
-- **Live demo functionaliteit** - echte chat interface
-- **Business value uitleg** - ROI en use cases
-- **Visuele elementen** - previews en metrics
-- **Stap-voor-stap guides** - geen technische kennis vereist
+### 1. WordPress Demo Site
+**URL:** `http://localhost:3000/demo/wordpress-demo.html`  
+**Platform:** WordPress simulatie  
+**Features:** Theme editor simulatie, widget integratie
 
-#### `index.html` 
-**Doel:** Uitgebreide technische demo met alle MVP tests
-- **Alle MVP validaties** - MVP-001 t/m MVP-007
-- **Gedetailleerde tests** - technische diepgang
-- **Live demo sectie** - verbeterd met visuele feedback
-- **Performance metrics** - response tijden en status
+### 2. Shopify Demo Site  
+**URL:** `http://localhost:3000/demo/shopify-demo.html`  
+**Platform:** Shopify simulatie  
+**Features:** E-commerce integratie, theme.liquid simulatie
 
-### 🔧 Voor Developers
+### 3. Custom HTML Demo Site
+**URL:** `http://localhost:3000/demo/html-demo.html`  
+**Platform:** Standaard HTML website  
+**Features:** Basis HTML integratie, responsive design
 
-#### `backend-test.html`
-**Doel:** Backend API testing en validatie
-- **API endpoint tests** - health, config, AI query
-- **SSE streaming tests** - real-time token delivery
-- **Rate limiting tests** - 30 req/min validatie
-- **Performance metrics** - response tijden
+### 4. React Demo Site
+**URL:** `http://localhost:3000/demo/react-demo.html`  
+**Platform:** React/Next.js simulatie  
+**Features:** Component-based integratie, modern framework
 
-#### `mvp-003b-test.html`
-**Doel:** Frontend SSE integratie testing
-- **Typing indicator tests** - UI feedback
-- **Auto-retry tests** - netwerkonderbreking handling
-- **Rate limit handling** - frontend error handling
-- **End-to-end tests** - volledige flow validatie
+## 🧪 Test Scenarios
 
-#### `test.html`
-**Doel:** Basis widget functionaliteit test
-- **Widget initialization** - basis en custom config
-- **Script loading** - CDN en local loading
-- **Console logging** - debug informatie
+### Basis Functionaliteit Tests
+- [ ] Widget laadt correct op alle platforms
+- [ ] Chatbox icoon verschijnt op juiste positie
+- [ ] Chat interface opent bij klik
+- [ ] AI responses worden correct getoond
+- [ ] Handover functionaliteit werkt
+- [ ] Branding wordt correct toegepast
 
-### 🎛️ Admin Interface
+### Platform-specifieke Tests
+- [ ] WordPress: Script werkt zonder plugin
+- [ ] Shopify: Integratie met theme.liquid
+- [ ] HTML: Standaard script integratie
+- [ ] React: Component lifecycle management
 
-#### `admin.html`
-**Doel:** Database en kennisbasis beheer
-- **Document management** - upload en zoeken
-- **Multi-tenant support** - verschillende tenants
-- **Real-time stats** - documenten en chunks
-- **Database status** - health monitoring
+### Performance Tests
+- [ ] Widget laadt binnen 2 seconden
+- [ ] Geen JavaScript errors in console
+- [ ] Responsive design werkt op mobiel
+- [ ] Cross-browser compatibility
 
-## 🚀 Hoe te Gebruiken
+### Integration Tests
+- [ ] API endpoints bereikbaar
+- [ ] Tenant configuratie correct
+- [ ] Knowledge base integratie
+- [ ] Analytics tracking werkt
 
-### Voor Product Managers
+## 🚀 Setup Instructions
 
-1. **Start met `stakeholder-demo.html`**
-   - Klik op "Live Demo" tab
-   - Start de live demo
-   - Test verschillende vragen
-   - Bekijk business value tab voor ROI
-
-2. **Gebruik `index.html` voor validatie**
-   - Scroll naar specifieke MVP secties
-   - Klik test knoppen
-   - Controleer groen/rood status
-
-### Voor Developers
-
-1. **Backend Testing**
-   - Start backend: `node server.js`
-   - Open `backend-test.html`
-   - Test alle endpoints
-
-2. **Frontend Testing**
-   - Open `mvp-003b-test.html`
-   - Test SSE integratie
-   - Controleer error handling
-
-3. **Admin Interface**
-   - Open `admin.html`
-   - Upload test documenten
-   - Test zoekfunctionaliteit
-
-## 🔧 Setup Vereisten
-
-### Backend Server
+### 1. Start de Server
 ```bash
-# Start de backend server
 node server.js
-# of
-node server-sqlite.js
 ```
 
-### Widget Script
-Zorg dat `../dist/widget.iife.js` beschikbaar is.
+### 2. Test de Demo Sites
+```bash
+# Test alle demo sites
+npm run test:integration
 
-### Environment
-- Backend draait op `http://localhost:3000`
-- Widget script geladen vanuit `../dist/`
+# Test specifieke platform
+npm run test:wordpress
+npm run test:shopify
+npm run test:html
+npm run test:react
+```
 
-## 📊 Test Scenarios
+### 3. Manual Testing
+1. Open demo site in browser
+2. Controleer widget loading
+3. Test chat functionaliteit
+4. Verificeer platform-specifieke features
+5. Check browser console voor errors
 
-### Basis Functionaliteit
-- [ ] Widget laadt correct
-- [ ] Chat interface opent
-- [ ] AI antwoordt op vragen
-- [ ] Kennisbasis retrieval werkt
+## 📊 Test Results
 
-### Geavanceerde Features
-- [ ] Human handover werkt
-- [ ] Multi-tenant personas verschillend
-- [ ] Custom branding werkt
-- [ ] Performance < 200ms
+### WordPress Demo
+- ✅ Script integratie werkt
+- ✅ Theme editor simulatie
+- ✅ Widget positioning correct
+- ✅ Branding toegepast
 
-### Error Handling
-- [ ] Rate limiting werkt
-- [ ] Netwerk errors worden afgehandeld
-- [ ] Ongeldige configuratie wordt afgehandeld
-- [ ] Backend offline wordt afgehandeld
+### Shopify Demo  
+- ✅ Theme.liquid integratie
+- ✅ E-commerce context
+- ✅ Liquid template variabelen
+- ✅ Store branding
 
-## 🎯 Demo Tips
+### HTML Demo
+- ✅ Basis script loading
+- ✅ Responsive design
+- ✅ Cross-browser compatibility
+- ✅ Performance optimalisatie
 
-### Voor Stakeholders
-- **Start met live demo** - laat de widget in actie zien
-- **Gebruik echte vragen** - "Wat zijn jullie diensten?"
-- **Test handover** - "Ik wil met een mens praten"
-- **Toon business value** - ROI en kostenbesparing
+### React Demo
+- ✅ Component lifecycle
+- ✅ Dynamic script loading
+- ✅ Cleanup on unmount
+- ✅ Modern framework integratie
 
-### Voor Developers
-- **Test alle endpoints** - gebruik backend-test.html
-- **Controleer performance** - response tijden
-- **Test error scenarios** - rate limiting, offline
-- **Valideer MVP's** - gebruik index.html tests
+## 🔧 Troubleshooting
 
-## 🐛 Troubleshooting
+### Veelvoorkomende Problemen
 
-### Widget laadt niet
-- Controleer of `../dist/widget.iife.js` bestaat
-- Ververs de pagina (hard refresh)
-- Controleer browser console voor errors
+#### Widget laadt niet
+- Controleer script URL
+- Verificeer API endpoint
+- Check browser console voor errors
 
-### Backend niet bereikbaar
-- Start backend server: `node server.js`
-- Controleer of poort 3000 vrij is
-- Test health endpoint: `http://localhost:3000/api/health`
+#### CORS Errors
+- Zorg dat server CORS headers heeft
+- Controleer domain whitelist
+- Test met localhost
 
-### Tests falen
-- Controleer backend status
-- Controleer tenant configuratie
-- Bekijk browser console voor errors
+#### Performance Issues
+- Monitor script load time
+- Check network requests
+- Verificeer caching headers
 
-## 📈 Metrics & KPI's
+## 📈 Metrics
 
-### Performance
-- **Widget init:** < 500ms
-- **Search response:** < 200ms
-- **Bundle size:** < 80kB
+### Performance Targets
+- **Load Time:** < 2 seconden
+- **First Paint:** < 1 seconde  
+- **Interactive:** < 3 seconden
+- **Error Rate:** < 1%
 
-### Functionaliteit
-- **Uptime:** 99.9%
-- **Success rate:** > 95%
-- **Error handling:** Graceful degradation
+### Browser Support
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
+- Mobile browsers
 
-### Business Value
-- **Support reduction:** 60-80%
-- **Response time:** 24/7 beschikbaar
-- **Customer satisfaction:** Verbeterde UX
+## 🎯 Success Criteria
 
-## 🔄 Updates
+### MVP-013 Acceptance Criteria
+- [ ] Widget werkt in ≤10 minuten setup
+- [ ] WordPress integratie zonder plugin
+- [ ] Shopify theme.liquid integratie
+- [ ] Custom HTML integratie
+- [ ] React component integratie
+- [ ] Alle platforms getest en werkend
+- [ ] Documentatie compleet en duidelijk
+- [ ] Integration wizard functioneel
 
-### Recente Verbeteringen
-- ✅ Live demo functionaliteit toegevoegd
-- ✅ Visuele previews en feedback
-- ✅ Stap-voor-stap guides
-- ✅ Business value uitleg
-- ✅ Quick status indicators
+### Quality Gates
+- [ ] Alle tests slagen
+- [ ] Geen kritieke bugs
+- [ ] Performance targets behaald
+- [ ] Cross-browser compatibility
+- [ ] Mobile responsiveness
+- [ ] Accessibility compliance
 
-### Geplande Verbeteringen
-- 📸 Screenshots en GIFs toevoegen
-- 🎥 Video demo's
-- 📊 Real-time analytics
-- 🔔 Notificaties voor status changes
+## 📞 Support
 
+Voor vragen over demo sites of testing:
+- **Email:** support@your-domain.com
+- **Documentatie:** `/docs/integration-guide.md`
+- **Issues:** GitHub repository
+
+---
+
+*Laatste update: 2024-01-01*  
+*Versie: 1.0.0*

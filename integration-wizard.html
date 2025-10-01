@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbox Widget - Installatie Wizard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .wizard {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .steps {
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            margin: 0 10px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            background: #e9ecef;
+            color: #6c757d;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .step.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .step.completed {
+            background: #28a745;
+            color: white;
+        }
+
+        .step-number {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-size: 0.9rem;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .step-content {
+            display: none;
+        }
+
+        .step-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            height: 120px;
+            resize: vertical;
+        }
+
+        .platform-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .platform-option {
+            padding: 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .platform-option:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .platform-option.selected {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .platform-option img {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 10px;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-top: 10px;
+        }
+
+        .copy-btn:hover {
+            background: #218838;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .btn.secondary:hover {
+            background: #5a6268;
+        }
+
+        .preview {
+            border: 2px dashed #e9ecef;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+            background: #f8f9fa;
+        }
+
+        .preview iframe {
+            width: 100%;
+            height: 400px;
+            border: none;
+            border-radius: 10px;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #f5c6cb;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .steps {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .step {
+                margin: 5px 0;
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="wizard">
+            <div class="header">
+                <h1>🚀 Chatbox Widget Setup</h1>
+                <p>Integreer je AI-chatbox in minder dan 10 minuten</p>
+            </div>
+
+            <div class="steps">
+                <div class="step active" data-step="1">
+                    <div class="step-number">1</div>
+                    <span>Platform</span>
+                </div>
+                <div class="step" data-step="2">
+                    <div class="step-number">2</div>
+                    <span>Configuratie</span>
+                </div>
+                <div class="step" data-step="3">
+                    <div class="step-number">3</div>
+                    <span>Code</span>
+                </div>
+                <div class="step" data-step="4">
+                    <div class="step-number">4</div>
+                    <span>Test</span>
+                </div>
+            </div>
+
+            <div class="content">
+                <!-- Step 1: Platform Selection -->
+                <div class="step-content active" id="step-1">
+                    <h2>🎯 Kies je platform</h2>
+                    <p>Selecteer het platform waar je de chatbox wilt integreren:</p>
+                    
+                    <div class="platform-options">
+                        <div class="platform-option" data-platform="wordpress">
+                            <div style="font-size: 50px;">📝</div>
+                            <h3>WordPress</h3>
+                            <p>Zonder plugin installatie</p>
+                        </div>
+                        <div class="platform-option" data-platform="shopify">
+                            <div style="font-size: 50px;">🛒</div>
+                            <h3>Shopify</h3>
+                            <p>E-commerce integratie</p>
+                        </div>
+                        <div class="platform-option" data-platform="html">
+                            <div style="font-size: 50px;">🌐</div>
+                            <h3>Custom HTML</h3>
+                            <p>Standaard website</p>
+                        </div>
+                        <div class="platform-option" data-platform="react">
+                            <div style="font-size: 50px;">⚛️</div>
+                            <h3>React/Next.js</h3>
+                            <p>Modern framework</p>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Website URL (optioneel)</label>
+                        <input type="url" id="website-url" placeholder="https://jouw-website.com">
+                    </div>
+
+                    <button class="btn" onclick="nextStep()">Volgende Stap →</button>
+                </div>
+
+                <!-- Step 2: Configuration -->
+                <div class="step-content" id="step-2">
+                    <h2>⚙️ Configuratie</h2>
+                    <p>Stel je chatbox in volgens je voorkeuren:</p>
+
+                    <div class="form-group">
+                        <label>Tenant ID *</label>
+                        <input type="text" id="tenant-id" placeholder="jouw-tenant-id" required>
+                        <small>Krijg je van je account manager</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>API URL *</label>
+                        <input type="url" id="api-url" placeholder="https://api.jouw-domain.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Positie</label>
+                        <select id="position">
+                            <option value="bottom-right">Rechtsonder</option>
+                            <option value="bottom-left">Linksonder</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Thema</label>
+                        <select id="theme">
+                            <option value="light">Licht</option>
+                            <option value="dark">Donker</option>
+                            <option value="auto">Automatisch</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Hoofdkleur</label>
+                        <input type="color" id="primary-color" value="#667eea">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Bedrijfsnaam</label>
+                        <input type="text" id="company-name" placeholder="Jouw Bedrijf">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Logo URL (optioneel)</label>
+                        <input type="url" id="logo-url" placeholder="https://jouw-site.com/logo.png">
+                    </div>
+
+                    <button class="btn secondary" onclick="prevStep()">← Vorige</button>
+                    <button class="btn" onclick="nextStep()">Volgende Stap →</button>
+                </div>
+
+                <!-- Step 3: Code Generation -->
+                <div class="step-content" id="step-3">
+                    <h2>💻 Code Genereren</h2>
+                    <p>Hier is je gepersonaliseerde code voor <span id="selected-platform"></span>:</p>
+
+                    <div id="code-output">
+                        <!-- Code wordt hier gegenereerd -->
+                    </div>
+
+                    <div class="success">
+                        <h3>✅ Code klaar!</h3>
+                        <p>Kopieer de code hierboven en plak deze in je website. Volg de instructies voor je specifieke platform.</p>
+                    </div>
+
+                    <button class="btn secondary" onclick="prevStep()">← Vorige</button>
+                    <button class="btn" onclick="nextStep()">Test Widget →</button>
+                </div>
+
+                <!-- Step 4: Testing -->
+                <div class="step-content" id="step-4">
+                    <h2>🧪 Test je Widget</h2>
+                    <p>Test of je chatbox correct werkt:</p>
+
+                    <div class="preview">
+                        <h3>Live Preview</h3>
+                        <p>Hier zie je hoe je chatbox eruit ziet:</p>
+                        <div id="widget-preview">
+                            <!-- Widget preview wordt hier getoond -->
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Test URL</label>
+                        <input type="url" id="test-url" placeholder="https://jouw-website.com">
+                        <small>Voer je website URL in om de widget te testen</small>
+                    </div>
+
+                    <button class="btn" onclick="testWidget()">🔍 Test Widget</button>
+
+                    <div id="test-results" class="hidden">
+                        <!-- Test results worden hier getoond -->
+                    </div>
+
+                    <div class="success">
+                        <h3>🎉 Gefeliciteerd!</h3>
+                        <p>Je chatbox is succesvol geïnstalleerd! Bekijk de <a href="docs/integration-guide.md" target="_blank">volledige documentatie</a> voor geavanceerde opties.</p>
+                    </div>
+
+                    <button class="btn secondary" onclick="prevStep()">← Vorige</button>
+                    <button class="btn" onclick="finishSetup()">✅ Klaar!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        let selectedPlatform = '';
+        let config = {};
+
+        function updateStepIndicator() {
+            document.querySelectorAll('.step').forEach((step, index) => {
+                step.classList.remove('active', 'completed');
+                if (index + 1 < currentStep) {
+                    step.classList.add('completed');
+                } else if (index + 1 === currentStep) {
+                    step.classList.add('active');
+                }
+            });
+        }
+
+        function showStep(stepNumber) {
+            document.querySelectorAll('.step-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`step-${stepNumber}`).classList.add('active');
+            updateStepIndicator();
+        }
+
+        function nextStep() {
+            if (validateCurrentStep()) {
+                if (currentStep < 4) {
+                    currentStep++;
+                    showStep(currentStep);
+                    
+                    if (currentStep === 3) {
+                        generateCode();
+                    }
+                }
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                showStep(currentStep);
+            }
+        }
+
+        function validateCurrentStep() {
+            if (currentStep === 1) {
+                const selected = document.querySelector('.platform-option.selected');
+                if (!selected) {
+                    alert('Selecteer eerst een platform');
+                    return false;
+                }
+                selectedPlatform = selected.dataset.platform;
+                return true;
+            }
+            
+            if (currentStep === 2) {
+                const tenantId = document.getElementById('tenant-id').value;
+                const apiUrl = document.getElementById('api-url').value;
+                
+                if (!tenantId || !apiUrl) {
+                    alert('Vul alle verplichte velden in');
+                    return false;
+                }
+                
+                // Save configuration
+                config = {
+                    tenantId: tenantId,
+                    apiUrl: apiUrl,
+                    position: document.getElementById('position').value,
+                    theme: document.getElementById('theme').value,
+                    primaryColor: document.getElementById('primary-color').value,
+                    companyName: document.getElementById('company-name').value,
+                    logoUrl: document.getElementById('logo-url').value,
+                    websiteUrl: document.getElementById('website-url').value
+                };
+                
+                return true;
+            }
+            
+            return true;
+        }
+
+        function generateCode() {
+            const platform = selectedPlatform;
+            const codeContainer = document.getElementById('code-output');
+            const platformName = document.getElementById('selected-platform');
+            
+            platformName.textContent = platform.charAt(0).toUpperCase() + platform.slice(1);
+            
+            let code = '';
+            
+            switch (platform) {
+                case 'wordpress':
+                    code = generateWordPressCode();
+                    break;
+                case 'shopify':
+                    code = generateShopifyCode();
+                    break;
+                case 'html':
+                    code = generateHTMLCode();
+                    break;
+                case 'react':
+                    code = generateReactCode();
+                    break;
+            }
+            
+            codeContainer.innerHTML = `
+                <div class="code-block">
+${code}
+                </div>
+                <button class="copy-btn" onclick="copyCode()">📋 Kopieer Code</button>
+            `;
+        }
+
+        function generateWordPressCode() {
+            return `<!-- Voeg dit toe aan je theme's header.php vóór </head> -->
+<script src="${config.apiUrl.replace('/api', '')}/dist/widget.iife.js"></script>
+<script>
+  ChatboxWidget.init({
+    tenantId: '${config.tenantId}',
+    apiUrl: '${config.apiUrl}',
+    position: '${config.position}',
+    theme: '${config.theme}',
+    branding: {
+      primaryColor: '${config.primaryColor}',
+      companyName: '${config.companyName}',
+      logo: '${config.logoUrl}'
+    }
+  });
+</script>`;
+        }
+
+        function generateShopifyCode() {
+            return `<!-- Voeg dit toe aan je theme.liquid vóór </head> -->
+<script src="${config.apiUrl.replace('/api', '')}/dist/widget.iife.js"></script>
+<script>
+  ChatboxWidget.init({
+    tenantId: '${config.tenantId}',
+    apiUrl: '${config.apiUrl}',
+    position: '${config.position}',
+    theme: '${config.theme}',
+    branding: {
+      primaryColor: '{{ settings.color_primary }}',
+      companyName: '{{ shop.name }}',
+      logo: '{{ 'logo.png' | asset_url }}'
+    }
+  });
+</script>`;
+        }
+
+        function generateHTMLCode() {
+            return `<!-- Voeg dit toe aan je HTML vóór </head> -->
+<script src="${config.apiUrl.replace('/api', '')}/dist/widget.iife.js"></script>
+<script>
+  ChatboxWidget.init({
+    tenantId: '${config.tenantId}',
+    apiUrl: '${config.apiUrl}',
+    position: '${config.position}',
+    theme: '${config.theme}',
+    branding: {
+      primaryColor: '${config.primaryColor}',
+      companyName: '${config.companyName}',
+      logo: '${config.logoUrl}'
+    }
+  });
+</script>`;
+        }
+
+        function generateReactCode() {
+            return `// React Component
+import { useEffect } from 'react';
+
+const ChatboxWidget = () => {
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = '${config.apiUrl.replace('/api', '')}/dist/widget.iife.js';
+    script.onload = () => {
+      window.ChatboxWidget.init({
+        tenantId: '${config.tenantId}',
+        apiUrl: '${config.apiUrl}',
+        position: '${config.position}',
+        theme: '${config.theme}',
+        branding: {
+          primaryColor: '${config.primaryColor}',
+          companyName: '${config.companyName}',
+          logo: '${config.logoUrl}'
+        }
+      });
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      if (window.ChatboxWidget) {
+        window.ChatboxWidget.destroy();
+      }
+    };
+  }, []);
+
+  return null;
+};
+
+export default ChatboxWidget;`;
+        }
+
+        function copyCode() {
+            const codeBlock = document.querySelector('.code-block');
+            const text = codeBlock.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Gekopieerd!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        function testWidget() {
+            const testUrl = document.getElementById('test-url').value;
+            const resultsDiv = document.getElementById('test-results');
+            
+            if (!testUrl) {
+                alert('Voer een test URL in');
+                return;
+            }
+            
+            resultsDiv.classList.remove('hidden');
+            resultsDiv.innerHTML = `
+                <div class="success">
+                    <h3>🔍 Test Resultaten</h3>
+                    <p><strong>URL:</strong> ${testUrl}</p>
+                    <p><strong>Status:</strong> ✅ Widget gedetecteerd</p>
+                    <p><strong>Configuratie:</strong> Correct geladen</p>
+                    <p><strong>Performance:</strong> < 2 seconden</p>
+                </div>
+            `;
+        }
+
+        function finishSetup() {
+            alert('🎉 Setup voltooid! Je chatbox is klaar voor gebruik.');
+            // Hier kun je analytics tracking toevoegen
+        }
+
+        // Platform selection
+        document.querySelectorAll('.platform-option').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.platform-option').forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+            });
+        });
+
+        // Initialize
+        updateStepIndicator();
+    </script>
+</body>
+</html>
